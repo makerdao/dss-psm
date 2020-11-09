@@ -30,6 +30,7 @@ contract DssPsm is LibNote {
 
     // --- Math ---
     uint256 constant WAD = 10 ** 18;
+    uint256 constant RAY = 10 ** 27;
     function add(uint256 x, uint256 y) internal pure returns (uint256 z) {
         require((z = x + y) >= x);
     }
@@ -54,16 +55,16 @@ contract DssPsm is LibNote {
             uint256 fee = mul(uwad, tin) / WAD;
             uint256 base = sub(uwad, fee);
             vat.slip(ilk, address(this), wad);
-            vat.frob(ilk, address(this), address(this), usr, int256(base), int256(base));
-            vat.frob(ilk, address(this), address(this), vow, int256(fee), int256(fee));
+            vat.frob(ilk, address(this), address(this), address(this), int256(wad), int256(wad));
+            vat.move(address(this), usr, mul(base, RAY));
+            vat.move(address(this), vow, mul(fee, RAY));
         } else {
             // Outgoing
             uint256 uwad = uint256(-wad);
             uint256 fee = mul(uwad, tout) / WAD;
-            uint256 base = sub(uwad, fee);
-            vat.move(usr, vow, fee);
-            vat.frob(ilk, address(this), address(this), usr, -int256(base), -int256(base));
-            vat.slip(ilk, address(this), -int256(base));
+            vat.move(usr, vow, mul(fee, RAY));
+            vat.frob(ilk, address(this), address(this), usr, -int256(uwad), -int256(uwad));
+            vat.slip(ilk, address(this), -int256(uwad));
         }
     }
 
