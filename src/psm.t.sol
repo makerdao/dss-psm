@@ -50,6 +50,7 @@ contract User {
     }
 
     function join(uint256 wad) public {
+        DSToken(address(gemJoin.gem())).approve(address(gemJoin));
         gemJoin.join(address(this), wad);
     }
 
@@ -226,6 +227,73 @@ contract DssPsmTest is DSTest {
         (uint256 ink, uint256 art) = vat.urns(ilk, address(psmA));
         assertEq(ink, 60 ether);
         assertEq(art, 60 ether);
+    }
+
+    function test_join_exit_other_small_fee() public {
+        psmA.file("tin", 1);        // Very small fee pushes you over the edge
+
+        User user1 = new User(vat, gemA);
+        usdx.transfer(address(user1), 40 ether);
+        user1.join(40 ether);
+
+        assertEq(usdx.balanceOf(address(user1)), 0 ether);
+        assertEq(vat.dai(address(user1)), rad(40 ether - 40));
+        assertEq(vow.Joy(), rad(40));
+        (uint256 ink1, uint256 art1) = vat.urns(ilk, address(psmA));
+        assertEq(ink1, 40 ether);
+        assertEq(art1, 40 ether);
+
+        user1.exit(40 ether - 40);
+
+        assertEq(usdx.balanceOf(address(user1)), 40 ether - 40);
+        assertEq(vat.dai(address(user1)), 0);
+        assertEq(vow.Joy(), rad(40));
+        (uint256 ink2, uint256 art2) = vat.urns(ilk, address(psmA));
+        assertEq(ink2, 40);
+        assertEq(art2, 40);
+    }
+
+    function testFail_join_insufficient_gem() public {
+        User user1 = new User(vat, gemA);
+        user1.join(40 ether);
+    }
+
+    function testFail_join_exit_small_fee_insufficient_dai() public {
+        psmA.file("tin", 1);        // Very small fee pushes you over the edge
+
+        User user1 = new User(vat, gemA);
+        usdx.transfer(address(user1), 40 ether);
+        user1.join(40 ether);
+        user1.exit(40 ether);
+    }
+
+    function testFail_join_over_line() public {
+        usdx.mint(1000 ether);
+        gemA.join(me, 2000 ether);
+    }
+
+    function testFail_two_users_insufficient_dai() public {
+        User user1 = new User(vat, gemA);
+        usdx.transfer(address(user1), 40 ether);
+        user1.join(40 ether);
+
+        User user2 = new User(vat, gemA);
+        vat.mint(address(user2), rad(39 ether));
+        user2.exit(40 ether);
+    }
+
+    function testFail_insufficient_dai_for_outgoing_fee() public {
+        psmA.file("tout", 1);        // Very small fee pushes you over the edge
+
+        gemA.join(me, 1 ether);
+        vat.hope(address(psmA));
+        gemA.exit(me, 1 ether);
+    }
+
+    function test_zero() public {
+        gemA.join(me, 0);
+        vat.hope(address(psmA));
+        gemA.exit(me, 0);
     }
     
 }
