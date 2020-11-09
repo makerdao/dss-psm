@@ -37,7 +37,7 @@ contract DssPsm is LibNote {
     function sub(uint256 x, uint256 y) internal pure returns (uint256 z) {
         require((z = x - y) <= x);
     }
-    function mul(uint256 x, uint256 y) internal pure returns (uint z) {
+    function mul(uint256 x, uint256 y) internal pure returns (uint256 z) {
         require(y == 0 || (z = x * y) / y == x);
     }
 
@@ -45,6 +45,10 @@ contract DssPsm is LibNote {
     function file(bytes32 what, uint256 data) external note auth {
         if (what == "tin") tin = data;
         else if (what == "tout") tout = data;
+        else revert("DssPsm/file-unrecognized-param");
+    }
+    function file(bytes32 what, address data) external note auth {
+        if (what == "vow") vow = data;
         else revert("DssPsm/file-unrecognized-param");
     }
 
