@@ -11,6 +11,7 @@ import {Dai}              from "dss/dai.sol";
 
 import "./psm.sol";
 import "./join-5-auth.sol";
+import "./lerp.sol";
 
 interface Hevm {
     function warp(uint256) external;
@@ -315,6 +316,41 @@ contract DssPsmTest is DSTest {
         psmA.swapGemForDai(me, 0);
         dai.approve(address(psmA), uint(-1));
         psmA.swapDaiForGem(me, 0);
+    }
+
+    function test_lerp_tin() public {
+        Lerp lerp = new Lerp(address(psmA), "tin", 1 * TOLL_ONE_PCT, 1 * TOLL_ONE_PCT / 10, 9 days);
+        assertEq(lerp.what(), "tin");
+        assertEq(lerp.start(), 1 * TOLL_ONE_PCT);
+        assertEq(lerp.end(), 1 * TOLL_ONE_PCT / 10);
+        assertEq(lerp.duration(), 9 days);
+        assertTrue(!lerp.started());
+        assertTrue(!lerp.done());
+        assertEq(lerp.startTime(), 0);
+        assertEq(psmA.tin(), 0);
+        psmA.rely(address(lerp));
+        lerp.init();
+        assertTrue(lerp.started());
+        assertTrue(!lerp.done());
+        assertEq(lerp.startTime(), block.timestamp);
+        assertEq(psmA.tin(), 1 * TOLL_ONE_PCT);
+        // This rounding error is present due to the 1/9 fractions and timestamp resolution, but it is negligable for practical purposes
+        uint256 timestampResRoundingError = 11574074074;
+        hevm.warp(1 days);
+        assertEq(psmA.tin(), 1 * TOLL_ONE_PCT);
+        lerp.tick();
+        assertEq(psmA.tin(), 9 * TOLL_ONE_PCT / 10 + timestampResRoundingError);    // 0.9%
+        hevm.warp(2 days);
+        lerp.tick();
+        assertEq(psmA.tin(), 8 * TOLL_ONE_PCT / 10 + timestampResRoundingError);    // 0.8%
+        hevm.warp(2 days + 12 hours);
+        lerp.tick();
+        assertEq(psmA.tin(), 75 * TOLL_ONE_PCT / 100 + timestampResRoundingError);    // 0.75%
+        hevm.warp(12 days);
+        lerp.tick();
+        assertEq(psmA.tin(), 1 * TOLL_ONE_PCT / 10);    // 0.1%
+        assertTrue(lerp.done());
+        psmA.deny(address(lerp));
     }
     
 }
