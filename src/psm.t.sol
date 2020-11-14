@@ -61,14 +61,14 @@ contract User {
         psm = psm_;
     }
 
-    function swapGemForDai(uint256 wad) public {
+    function sellGem(uint256 wad) public {
         DSToken(address(gemJoin.gem())).approve(address(gemJoin));
-        psm.swapGemForDai(address(this), wad);
+        psm.sellGem(address(this), wad);
     }
 
-    function swapDaiForGem(uint256 wad) public {
+    function buyGem(uint256 wad) public {
         dai.approve(address(psm), uint256(-1));
-        psm.swapDaiForGem(address(this), wad);
+        psm.buyGem(address(this), wad);
     }
 
 }
@@ -135,6 +135,7 @@ contract DssPsmTest is DSTest {
 
         psmA = new DssPsm(address(gemA), address(daiJoin), address(vow));
         gemA.rely(address(psmA));
+        gemA.deny(me);
 
         pip = new DSValue();
         pip.poke(bytes32(uint256(1 ether))); // Spot = $1
@@ -147,7 +148,7 @@ contract DssPsmTest is DSTest {
         vat.file("Line",      rad(1000 ether));
     }
 
-    function test_swapGemForDai_no_fee() public {
+    function test_sellGem_no_fee() public {
         assertEq(usdx.balanceOf(me), 1000 * USDX_WAD);
         assertEq(vat.gem(ilk, me), 0);
         assertEq(vat.dai(me), 0);
@@ -155,7 +156,7 @@ contract DssPsmTest is DSTest {
         assertEq(vow.Joy(), 0);
 
         usdx.approve(address(gemA));
-        psmA.swapGemForDai(me, 100 * USDX_WAD);
+        psmA.sellGem(me, 100 * USDX_WAD);
 
         assertEq(usdx.balanceOf(me), 900 * USDX_WAD);
         assertEq(vat.gem(ilk, me), 0);
@@ -170,7 +171,7 @@ contract DssPsmTest is DSTest {
         assertEq(artpsm, 100 ether);
     }
 
-    function test_swapGemForDai_fee() public {
+    function test_sellGem_fee() public {
         psmA.file("tin", TOLL_ONE_PCT);
 
         assertEq(usdx.balanceOf(me), 1000 * USDX_WAD);
@@ -180,7 +181,7 @@ contract DssPsmTest is DSTest {
         assertEq(vow.Joy(), 0);
 
         usdx.approve(address(gemA));
-        psmA.swapGemForDai(me, 100 * USDX_WAD);
+        psmA.sellGem(me, 100 * USDX_WAD);
 
         assertEq(usdx.balanceOf(me), 900 * USDX_WAD);
         assertEq(vat.gem(ilk, me), 0);
@@ -191,9 +192,9 @@ contract DssPsmTest is DSTest {
 
     function test_swap_both_no_fee() public {
         usdx.approve(address(gemA));
-        psmA.swapGemForDai(me, 100 * USDX_WAD);
+        psmA.sellGem(me, 100 * USDX_WAD);
         dai.approve(address(psmA), 40 ether);
-        psmA.swapDaiForGem(me, 40 ether);
+        psmA.buyGem(me, 40 * USDX_WAD);
 
         assertEq(usdx.balanceOf(me), 940 * USDX_WAD);
         assertEq(vat.gem(ilk, me), 0);
@@ -210,7 +211,7 @@ contract DssPsmTest is DSTest {
         psmA.file("tout", 10 * TOLL_ONE_PCT);
 
         usdx.approve(address(gemA));
-        psmA.swapGemForDai(me, 100 * USDX_WAD);
+        psmA.sellGem(me, 100 * USDX_WAD);
 
         assertEq(usdx.balanceOf(me), 900 * USDX_WAD);
         assertEq(dai.balanceOf(me), 95 ether);
@@ -219,20 +220,20 @@ contract DssPsmTest is DSTest {
         assertEq(ink1, 100 ether);
         assertEq(art1, 100 ether);
 
-        dai.approve(address(psmA), 40 ether);
-        psmA.swapDaiForGem(me, 40 ether);
+        dai.approve(address(psmA), 44 ether);
+        psmA.buyGem(me, 40 * USDX_WAD);
 
-        assertEq(usdx.balanceOf(me), 936 * USDX_WAD);
-        assertEq(dai.balanceOf(me), 55 ether);
+        assertEq(usdx.balanceOf(me), 940 * USDX_WAD);
+        assertEq(dai.balanceOf(me), 51 ether);
         assertEq(vow.Joy(), rad(9 ether));
         (uint256 ink2, uint256 art2) = vat.urns(ilk, address(psmA));
-        assertEq(ink2, 64 ether);
-        assertEq(art2, 64 ether);
+        assertEq(ink2, 60 ether);
+        assertEq(art2, 60 ether);
     }
 
     function test_swap_both_other() public {
         usdx.approve(address(gemA));
-        psmA.swapGemForDai(me, 100 * USDX_WAD);
+        psmA.sellGem(me, 100 * USDX_WAD);
 
         assertEq(usdx.balanceOf(me), 900 * USDX_WAD);
         assertEq(dai.balanceOf(me), 100 ether);
@@ -240,7 +241,7 @@ contract DssPsmTest is DSTest {
 
         User someUser = new User(dai, gemA, psmA);
         dai.mint(address(someUser), 45 ether);
-        someUser.swapDaiForGem(40 ether);
+        someUser.buyGem(40 * USDX_WAD);
 
         assertEq(usdx.balanceOf(me), 900 * USDX_WAD);
         assertEq(usdx.balanceOf(address(someUser)), 40 * USDX_WAD);
@@ -261,7 +262,7 @@ contract DssPsmTest is DSTest {
 
         User user1 = new User(dai, gemA, psmA);
         usdx.transfer(address(user1), 40 * USDX_WAD);
-        user1.swapGemForDai(40 * USDX_WAD);
+        user1.sellGem(40 * USDX_WAD);
 
         assertEq(usdx.balanceOf(address(user1)), 0 * USDX_WAD);
         assertEq(dai.balanceOf(address(user1)), 40 ether - 40);
@@ -270,20 +271,19 @@ contract DssPsmTest is DSTest {
         assertEq(ink1, 40 ether);
         assertEq(art1, 40 ether);
 
-        // Even with 0% fee out the rounding error will add some dai to the surplus buffer
-        user1.swapDaiForGem(40 ether - 40);
+        user1.buyGem(40 * USDX_WAD - 1);
 
         assertEq(usdx.balanceOf(address(user1)), 40 * USDX_WAD - 1);
-        assertEq(dai.balanceOf(address(user1)), 0);
-        assertEq(vow.Joy(), rad(1 * 10 ** 12));
+        assertEq(dai.balanceOf(address(user1)), 999999999960);
+        assertEq(vow.Joy(), rad(40));
         (uint256 ink2, uint256 art2) = vat.urns(ilk, address(psmA));
         assertEq(ink2, 1 * 10 ** 12);
         assertEq(art2, 1 * 10 ** 12);
     }
 
-    function testFail_swapGemForDai_insufficient_gem() public {
+    function testFail_sellGem_insufficient_gem() public {
         User user1 = new User(dai, gemA, psmA);
-        user1.swapGemForDai(40 * USDX_WAD);
+        user1.sellGem(40 * USDX_WAD);
     }
 
     function testFail_swap_both_small_fee_insufficient_dai() public {
@@ -291,31 +291,36 @@ contract DssPsmTest is DSTest {
 
         User user1 = new User(dai, gemA, psmA);
         usdx.transfer(address(user1), 40 * USDX_WAD);
-        user1.swapGemForDai(40 * USDX_WAD);
-        user1.swapDaiForGem(40 ether);
+        user1.sellGem(40 * USDX_WAD);
+        user1.buyGem(40 * USDX_WAD);
     }
 
-    function testFail_swapGemForDai_over_line() public {
+    function testFail_sellGem_over_line() public {
         usdx.mint(1000 * USDX_WAD);
         usdx.approve(address(gemA));
-        psmA.swapDaiForGem(me, 2000 * USDX_WAD);
+        psmA.buyGem(me, 2000 * USDX_WAD);
     }
 
     function testFail_two_users_insufficient_dai() public {
         User user1 = new User(dai, gemA, psmA);
         usdx.transfer(address(user1), 40 * USDX_WAD);
-        user1.swapGemForDai(40 * USDX_WAD);
+        user1.sellGem(40 * USDX_WAD);
 
         User user2 = new User(dai, gemA, psmA);
         dai.mint(address(user2), 39 ether);
-        user2.swapDaiForGem(40 ether);
+        user2.buyGem(40 * USDX_WAD);
     }
 
     function test_swap_both_zero() public {
         usdx.approve(address(gemA), uint(-1));
-        psmA.swapGemForDai(me, 0);
+        psmA.sellGem(me, 0);
         dai.approve(address(psmA), uint(-1));
-        psmA.swapDaiForGem(me, 0);
+        psmA.buyGem(me, 0);
+    }
+
+    function testFail_direct_deposit() public {
+        usdx.approve(address(gemA), uint(-1));
+        gemA.join(me, 10 * USDX_WAD, me);
     }
 
     function test_lerp_tin() public {

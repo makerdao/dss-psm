@@ -31,7 +31,7 @@ contract DssPsm {
     bytes32 immutable public ilk;
     address immutable public vow;
 
-    uint256 immutable internal gemWadConversionFactor;
+    uint256 immutable internal to18ConversionFactor;
 
     uint256 public tin;         // toll in [wad]
     uint256 public tout;        // toll out [wad]
@@ -40,8 +40,8 @@ contract DssPsm {
     event AuthUser(address indexed user);
     event DeauthUser(address indexed user);
     event File(bytes32 indexed what, uint256 data);
-    event GemForDaiSwap(address indexed owner, uint256 value, uint256 fee);
-    event DaiForGemSwap(address indexed owner, uint256 value, uint256 fee);
+    event SellGem(address indexed owner, uint256 value, uint256 fee);
+    event BuyGem(address indexed owner, uint256 value, uint256 fee);
 
     // --- Init ---
     constructor(address gemJoin_, address daiJoin_, address vow_) public {
@@ -52,7 +52,7 @@ contract DssPsm {
         DaiAbstract dai__ = dai = DaiAbstract(address(daiJoin__.dai()));
         ilk = gemJoin__.ilk();
         vow = vow_;
-        gemWadConversionFactor = 10 ** (18 - gemJoin__.dec());
+        to18ConversionFactor = 10 ** (18 - gemJoin__.dec());
         dai__.approve(daiJoin_, uint256(-1));
         vat__.hope(daiJoin_);
     }
@@ -86,29 +86,29 @@ contract DssPsm {
     }
 
     // --- Primary Functions ---
-    function swapGemForDai(address usr, uint256 wad) external {
-        uint256 wad18 = mul(wad, gemWadConversionFactor);
-        uint256 fee = mul(wad18, tin) / WAD;
-        uint256 base = sub(wad18, fee);
-        gemJoin.join(address(this), wad, msg.sender);
-        vat.frob(ilk, address(this), address(this), address(this), int256(wad18), int256(wad18));
+    function sellGem(address usr, uint256 gemAmt) external {
+        uint256 gemAmt18 = mul(gemAmt, to18ConversionFactor);
+        uint256 fee = mul(gemAmt18, tin) / WAD;
+        uint256 daiAmt = sub(gemAmt18, fee);
+        gemJoin.join(address(this), gemAmt, msg.sender);
+        vat.frob(ilk, address(this), address(this), address(this), int256(gemAmt18), int256(gemAmt18));
         vat.move(address(this), vow, mul(fee, RAY));
-        daiJoin.exit(usr, base);
+        daiJoin.exit(usr, daiAmt);
 
-        emit GemForDaiSwap(usr, wad, fee);
+        emit SellGem(usr, gemAmt, fee);
     }
 
-    function swapDaiForGem(address usr, uint256 wad) external {
-        require(dai.transferFrom(msg.sender, address(this), wad), "DssPsm/failed-transfer");
-        uint256 wadGem = wad / gemWadConversionFactor;
-        uint256 fee = add(mul(wad, tout) / WAD, sub(wad, mul(wadGem, gemWadConversionFactor))); // Fee = tout + Division Remainder
-        uint256 base = sub(wad, fee);
-        daiJoin.join(address(this), wad);
+    function buyGem(address usr, uint256 gemAmt) external {
+        uint256 gemAmt18 = mul(gemAmt, to18ConversionFactor);
+        uint256 fee = mul(gemAmt18, tout) / WAD;
+        uint256 daiAmt = add(gemAmt18, fee);
+        require(dai.transferFrom(msg.sender, address(this), daiAmt), "DssPsm/failed-transfer");
+        daiJoin.join(address(this), daiAmt);
+        vat.frob(ilk, address(this), address(this), address(this), -int256(gemAmt18), -int256(gemAmt18));
+        gemJoin.exit(usr, gemAmt);
         vat.move(address(this), vow, mul(fee, RAY));
-        vat.frob(ilk, address(this), address(this), address(this), -int256(base), -int256(base));
-        gemJoin.exit(usr, base / gemWadConversionFactor);
 
-        emit DaiForGemSwap(usr, wad, fee);
+        emit BuyGem(usr, gemAmt, fee);
     }
 
 }

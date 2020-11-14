@@ -52,6 +52,7 @@ contract Lerp {
         require(block.timestamp > startTime, "Lerp/no-time-elasped");
         require(!done, "Lerp/finished");
         if (block.timestamp < startTime + duration) {
+            // This will not overflow unless start or end is really large
             uint256 t = WAD * (block.timestamp - startTime) / duration;
             target.file(what, end * t / WAD + start - start * t / WAD);
         } else {
