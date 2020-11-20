@@ -15,6 +15,15 @@ contract Lerp {
     modifier auth { require(wards[msg.sender] == 1); _; }
 
     uint256 constant WAD = 10 ** 18;
+    function add(uint256 x, uint256 y) internal pure returns (uint256 z) {
+        require((z = x + y) >= x);
+    }
+    function sub(uint256 x, uint256 y) internal pure returns (uint256 z) {
+        require((z = x - y) <= x);
+    }
+    function mul(uint256 x, uint256 y) internal pure returns (uint256 z) {
+        require(y == 0 || (z = x * y) / y == x);
+    }
 
     FileLike immutable public target;
     bytes32 immutable public what;
@@ -53,8 +62,8 @@ contract Lerp {
         require(!done, "Lerp/finished");
         if (block.timestamp < startTime + duration) {
             // This will not overflow unless start or end is really large
-            uint256 t = WAD * (block.timestamp - startTime) / duration;
-            target.file(what, end * t / WAD + start - start * t / WAD);
+            uint256 t = mul(WAD, sub(block.timestamp, startTime)) / duration;
+            target.file(what, sub(add(mul(end, t) / WAD, start), mul(start, t) / WAD));
         } else {
             target.file(what, end);
             done = true;
