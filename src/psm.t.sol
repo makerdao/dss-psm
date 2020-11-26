@@ -339,18 +339,16 @@ contract DssPsmTest is DSTest {
         assertTrue(!lerp.done());
         assertEq(lerp.startTime(), block.timestamp);
         assertEq(psmA.tin(), 1 * TOLL_ONE_PCT);
-        // This rounding error is present due to the 1/9 fractions and timestamp resolution, but it is negligable for practical purposes
-        uint256 timestampResRoundingError = 11574074074;
         hevm.warp(1 days);
         assertEq(psmA.tin(), 1 * TOLL_ONE_PCT);
         lerp.tick();
-        assertEq(psmA.tin(), 9 * TOLL_ONE_PCT / 10 + timestampResRoundingError);    // 0.9%
+        assertEq(psmA.tin(), 9 * TOLL_ONE_PCT / 10);    // 0.9%
         hevm.warp(2 days);
         lerp.tick();
-        assertEq(psmA.tin(), 8 * TOLL_ONE_PCT / 10 + timestampResRoundingError);    // 0.8%
+        assertEq(psmA.tin(), 8 * TOLL_ONE_PCT / 10);    // 0.8%
         hevm.warp(2 days + 12 hours);
         lerp.tick();
-        assertEq(psmA.tin(), 75 * TOLL_ONE_PCT / 100 + timestampResRoundingError);    // 0.75%
+        assertEq(psmA.tin(), 75 * TOLL_ONE_PCT / 100);    // 0.75%
         hevm.warp(12 days);
         lerp.tick();
         assertEq(psmA.tin(), 1 * TOLL_ONE_PCT / 10);    // 0.1%
