@@ -20,8 +20,8 @@ contract DssPsm {
 
     // --- Auth ---
     mapping (address => uint256) public wards;
-    function rely(address usr) external auth { wards[usr] = 1; emit AuthUser(usr); }
-    function deny(address usr) external auth { wards[usr] = 0; emit DeauthUser(usr); }
+    function rely(address usr) external auth { wards[usr] = 1; emit Rely(usr); }
+    function deny(address usr) external auth { wards[usr] = 0; emit Deny(usr); }
     modifier auth { require(wards[msg.sender] == 1); _; }
 
     VatAbstract immutable public vat;
@@ -37,8 +37,8 @@ contract DssPsm {
     uint256 public tout;        // toll out [wad]
 
     // --- Events ---
-    event AuthUser(address indexed user);
-    event DeauthUser(address indexed user);
+    event Rely(address indexed user);
+    event Deny(address indexed user);
     event File(bytes32 indexed what, uint256 data);
     event SellGem(address indexed owner, uint256 value, uint256 fee);
     event BuyGem(address indexed owner, uint256 value, uint256 fee);
@@ -46,6 +46,7 @@ contract DssPsm {
     // --- Init ---
     constructor(address gemJoin_, address daiJoin_, address vow_) public {
         wards[msg.sender] = 1;
+        emit Rely(msg.sender);
         AuthGemJoinAbstract gemJoin__ = gemJoin = AuthGemJoinAbstract(gemJoin_);
         DaiJoinAbstract daiJoin__ = daiJoin = DaiJoinAbstract(daiJoin_);
         VatAbstract vat__ = vat = VatAbstract(address(gemJoin__.vat()));
