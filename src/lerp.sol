@@ -1,4 +1,4 @@
-pragma solidity >=0.5.12;
+pragma solidity ^0.6.7;
 
 interface FileLike {
     function file(bytes32, uint256) external;
