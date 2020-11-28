@@ -28,7 +28,8 @@ PSM=$(dapp create DssPsm $GEM_JOIN_PSM $MCD_JOIN_DAI $MCD_VOW)
 sleep 3
 
 # Deploy new Flipper
-FLIPPER_PSM=$(TX=$(seth send $FLIP_FAB 'newFlip(address,address,bytes32)(address)' $MCD_VAT $MCD_CAT $ILK --async) && seth receipt $TX logs | jq -r '.[0].address')
+FLIPPER_PSM_NO_CHECK=$(TX=$(seth send $FLIP_FAB 'newFlip(address,address,bytes32)(address)' $MCD_VAT $MCD_CAT $ILK --async) && seth receipt $TX logs | jq -r '.[0].address')
+FLIPPER_PSM=$(seth --to-address $FLIPPER_PSM_NO_CHECK)
 sleep 3
 
 # Deploy lerp module
