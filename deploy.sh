@@ -7,7 +7,7 @@
 ####################################################
 
 # Update these to whatever gem is required
-ILK=$(seth --to-bytes32 "$(seth --from-ascii "USDC-PSM")")
+ILK=$(seth --to-bytes32 "$(seth --from-ascii "PSM-USDC-A")")
 TOKEN=$USDC
 PIP=$PIP_USDC
 LERP_START=10000000000000000    # 1%
