@@ -1,6 +1,7 @@
 pragma solidity ^0.6.7;
 
 interface FileLike {
+    function deny(address) external;
     function file(bytes32, uint256) external;
 }
 
@@ -60,12 +61,16 @@ contract Lerp {
         require(started, "Lerp/not-started");
         require(block.timestamp > startTime, "Lerp/no-time-elasped");
         require(!done, "Lerp/finished");
-        if (block.timestamp < startTime + duration) {
-            // This will not overflow unless start or end is really large
+        if (block.timestamp < add(startTime, duration)) {
+            // 0 <= t < WAD
             uint256 t = mul(WAD, sub(block.timestamp, startTime)) / duration;
+            // y = (end - start) * t + start [Linear Interpolation]
+            //   = end * t + start - start * t [Avoids overflow by moving the subtraction to the end]
             target.file(what, sub(add(mul(end, t) / WAD, start), mul(start, t) / WAD));
         } else {
+            // Set the end value and de-auth yourself
             target.file(what, end);
+            target.deny(address(this));
             done = true;
         }
     }

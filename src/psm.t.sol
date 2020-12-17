@@ -350,10 +350,11 @@ contract DssPsmTest is DSTest {
         lerp.tick();
         assertEq(psmA.tin(), 75 * TOLL_ONE_PCT / 100);    // 0.75%
         hevm.warp(12 days);
+        assertEq(psmA.wards(address(lerp)), 1);
         lerp.tick();
         assertEq(psmA.tin(), 1 * TOLL_ONE_PCT / 10);    // 0.1%
         assertTrue(lerp.done());
-        psmA.deny(address(lerp));
+        assertEq(psmA.wards(address(lerp)), 0);
     }
     
 }
