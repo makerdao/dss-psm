@@ -65,7 +65,7 @@ contract AuthGemJoin5 is LibNote {
         require(y == 0 || (z = x * y) / y == x, "GemJoin5/overflow");
     }
 
-    function join(address urn, uint256 wad, address _msgSender) public note auth {
+    function join(address urn, uint256 wad, address _msgSender) external note auth {
         require(live == 1, "GemJoin5/not-live");
         uint256 wad18 = mul(wad, 10 ** (18 - dec));
         require(int256(wad18) >= 0, "GemJoin5/overflow");
@@ -73,7 +73,7 @@ contract AuthGemJoin5 is LibNote {
         require(gem.transferFrom(_msgSender, address(this), wad), "GemJoin5/failed-transfer");
     }
 
-    function exit(address guy, uint256 wad) public note {
+    function exit(address guy, uint256 wad) external note {
         uint256 wad18 = mul(wad, 10 ** (18 - dec));
         require(int256(wad18) >= 0, "GemJoin5/overflow");
         vat.slip(ilk, msg.sender, -int256(wad18));
