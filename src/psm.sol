@@ -37,8 +37,8 @@ contract DssPsm {
     uint256 public tout;        // toll out [wad]
 
     // --- Events ---
-    event Rely(address user);
-    event Deny(address user);
+    event Rely(address indexed usr);
+    event Deny(address indexed usr);
     event File(bytes32 indexed what, uint256 data);
     event SellGem(address indexed owner, uint256 value, uint256 fee);
     event BuyGem(address indexed owner, uint256 value, uint256 fee);
