@@ -79,6 +79,9 @@ contract DssPsm {
 
         emit File(what, data);
     }
+
+    // hope can be used to transfer control of the PSM vault to another contract
+    // This can be used to upgrade the contract
     function hope(address usr) external auth {
         vat.hope(usr);
     }
