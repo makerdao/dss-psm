@@ -2,7 +2,7 @@
 
 The official implementation of the [Peg Stability Module](https://forum.makerdao.com/t/mip29-peg-stability-module/5071). There are two main components to the PSM:
 
-##### AuthGemJoinX
+### AuthGemJoinX
 
 This is an exact duplicate of the `GemJoinX` adapter for the given collateral type with two modifications.
 
@@ -14,11 +14,11 @@ Second, all instances of `msg.sender` are replaced with `_msgSender` in the `joi
 
 In this repository I have added [join-5-auth.sol](https://github.com/BellwoodStudios/dss-psm/blob/master/src/join-5-auth.sol) for the PSM-friendly version of [join-5.sol](https://github.com/makerdao/dss-gem-joins/blob/master/src/join-5.sol) which is used for USDC. This can be applied to any other gem join adapter.
 
-##### DssPsm
+### DssPsm
 
 This is the actual PSM module which acts as a authed special vault sitting behind the `AuthGemJoinX` contract. `DssPsm` allows you to either call `sellGem()` or `buyGem()` to trade ERC20 DAI for the gem or vice versa. Upon calling one of these functions the PSM vault will either lock gems in the join adapter, take out a dai loan and issue ERC20 DAI to the specified user or do that process in reverse.
 
-##### Approvals
+#### Approvals
 
 The PSM requires ERC20 approvals to pull in the tokens.
 
@@ -35,7 +35,7 @@ To use `buyGem(usr, amt)` you must first call `dai.approve(<psmAddress>, amt + f
     dai.approve(0x89B78CfA322F6C5dE0aBcEecab66Aee45393cC5A, 100 * (psm.tout() + WAD));
     psm.buyGem(address(this), 100 * (10 ** 6));
 
-##### Notes on Fees
+#### Notes on Fees
 
 Please note the fee behaviour is not the same for both functions.
 
