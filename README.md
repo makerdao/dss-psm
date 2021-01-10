@@ -49,16 +49,10 @@ Please note this was a conscious decision to avoid dealing with decimal division
 
 ### Mainnet
 
-GemJoin: [0x0A59649758aa4d66E25f08Dd01271e891fe52199](https://etherscan.io/address/0x0A59649758aa4d66E25f08Dd01271e891fe52199#code)
-PSM: [0x89B78CfA322F6C5dE0aBcEecab66Aee45393cC5A](https://etherscan.io/address/0x89B78CfA322F6C5dE0aBcEecab66Aee45393cC5A#code)
-Flipper: [0x507420100393b1Dc2e8b4C8d0F8A13B56268AC99](https://etherscan.io/address/0x507420100393b1Dc2e8b4C8d0F8A13B56268AC99#code)
-Lerp: [0x8089E7833B6C39583Cd79c67329c6B5628DC1885](https://etherscan.io/address/0x8089E7833B6C39583Cd79c67329c6B5628DC1885#code)
-Spell: [0x437F5aAF195C97a01f85e672bb8e371484D96C57](https://etherscan.io/address/0x437F5aAF195C97a01f85e672bb8e371484D96C57#code)
+GemJoin: [0x0A59649758aa4d66E25f08Dd01271e891fe52199](https://etherscan.io/address/0x0A59649758aa4d66E25f08Dd01271e891fe52199#code)  
+PSM: [0x89B78CfA322F6C5dE0aBcEecab66Aee45393cC5A](https://etherscan.io/address/0x89B78CfA322F6C5dE0aBcEecab66Aee45393cC5A#code)  
 
 ### Kovan
 
-GemJoin: [0x4BA159Ad37FD80D235b4a948A8682747c74fDc0E](https://kovan.etherscan.io/address/0x4BA159Ad37FD80D235b4a948A8682747c74fDc0E#code)
-PSM: [0xe4dC42e438879987e287A6d9519379936d7b065A](https://kovan.etherscan.io/address/0xe4dC42e438879987e287A6d9519379936d7b065A#code)
-Flipper: [0xe9eef655494F63802e9C7A7F1006547c4De3e713](https://kovan.etherscan.io/address/0xe9eef655494F63802e9C7A7F1006547c4De3e713#code)
-Lerp: [0x489f89E54a807BE8fe531C1663FA9A39Bbdde4F4](https://kovan.etherscan.io/address/0x489f89E54a807BE8fe531C1663FA9A39Bbdde4F4#code)
-Spell: [0x141aE0745C903d586c4106Bf6fb3525B3c9BE60A](https://kovan.etherscan.io/address/0x141aE0745C903d586c4106Bf6fb3525B3c9BE60A#code)
+GemJoin: [0x4BA159Ad37FD80D235b4a948A8682747c74fDc0E](https://kovan.etherscan.io/address/0x4BA159Ad37FD80D235b4a948A8682747c74fDc0E#code)  
+PSM: [0xe4dC42e438879987e287A6d9519379936d7b065A](https://kovan.etherscan.io/address/0xe4dC42e438879987e287A6d9519379936d7b065A#code)  
