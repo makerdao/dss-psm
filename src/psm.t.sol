@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pragma solidity ^0.6.7;
+pragma solidity ^0.6.12;
 
 import "ds-test/test.sol";
 import "ds-value/value.sol";
@@ -35,7 +35,7 @@ interface Hevm {
 
 contract TestToken is DSToken {
 
-    constructor(bytes32 symbol_, uint256 decimals_) public DSToken(symbol_) {
+    constructor(string memory symbol_, uint8 decimals_) public DSToken(symbol_) {
         decimals = decimals_;
     }
 

@@ -4,37 +4,38 @@
 # Deploy all scripts on chain to prepare for spell
 #
 # Requires MCD environment variables to be in scope https://changelog.makerdao.com/releases/kovan/active/contracts.json
+#
+# Usage: ./deploy.sh <ILK> <GEM JOIN VARIANT> <TOKEN ADDRESS> <PIP ADDRESS>
+# Example: ./deploy.sh PSM-USDC-A AuthGemJoin5 $USDC $PIP_USDC
 ####################################################
 
 # Update these to whatever gem is required
-ILK=$(seth --to-bytes32 "$(seth --from-ascii "PSM-USDC-A")")
-TOKEN=$USDC
-PIP=$PIP_USDC
-LERP_START=10000000000000000    # 1%
-LERP_END=1000000000000000       # 0.1%
-LERP_DUR=604800                 # 1 week
+ILK=$(seth --to-bytes32 "$(seth --from-ascii "$1")")
+GEMJOIN=$2
+TOKEN=$3
+PIP=$4
 
 # Build everything
-dapp --use solc:0.6.7 build
+dapp --use solc:0.6.12 build
 
 echo "Deploying contracts..."
 
 # Deploy AuthGemJoin5
-GEM_JOIN_PSM=$(dapp create AuthGemJoin5 $MCD_VAT $ILK $TOKEN)
+GEM_JOIN_PSM=$(dapp create $GEMJOIN $MCD_VAT $ILK $TOKEN)
 sleep 3     # Sleeps are added so the block can propagate
 
 # Deploy the PSM
 PSM=$(dapp create DssPsm $GEM_JOIN_PSM $MCD_JOIN_DAI $MCD_VOW)
 sleep 3
 
-# Deploy new Flipper
-FLIPPER_PSM_NO_CHECK=$(TX=$(seth send $FLIP_FAB 'newFlip(address,address,bytes32)(address)' $MCD_VAT $MCD_CAT $ILK --async) && seth receipt $TX logs | jq -r '.[0].address')
-FLIPPER_PSM=$(seth --to-address $FLIPPER_PSM_NO_CHECK)
+# Deploy new Clipper
+CLIPPER_PSM_NO_CHECK=$(TX=$(seth send $CLIP_FAB 'newClip(address,address,address,address,bytes32)(address)' $MCD_PAUSE_PROXY $MCD_VAT $MCD_SPOT $MCD_DOG $ILK --async) && seth receipt $TX logs | jq -r '.[0].address')
+CLIPPER_PSM=$(seth --to-address $CLIPPER_PSM_NO_CHECK)
 sleep 3
 
-# Deploy lerp module
-LERP=$(dapp create Lerp $PSM $(seth --to-bytes32 "$(seth --from-ascii "tin")") $LERP_START $LERP_END $LERP_DUR)
-sleep 3
+# Deploy new Clip Calc
+#CLIPPER_CALC_PSM=$(dapp create lib/dss/src/abaci.sol:StairstepExponentialDecrease)
+#sleep 3
 
 # Set up permissions
 echo "Setting up permissions..."
@@ -46,23 +47,17 @@ sleep 3
 seth send $GEM_JOIN_PSM 'deny(address)' $ETH_FROM
 sleep 3
 
-seth send $FLIPPER_PSM 'rely(address)' $MCD_PAUSE_PROXY
-sleep 3
-seth send $FLIPPER_PSM 'deny(address)' $ETH_FROM
-sleep 3
-
 seth send $PSM 'rely(address)' $MCD_PAUSE_PROXY
-sleep 3
-seth send $PSM 'rely(address)' $LERP
 sleep 3
 seth send $PSM 'deny(address)' $ETH_FROM
 sleep 3
 
-seth send $LERP 'rely(address)' $MCD_PAUSE_PROXY
-sleep 3
-seth send $LERP 'deny(address)' $ETH_FROM
+#seth send $CLIPPER_CALC_PSM 'rely(address)' $MCD_PAUSE_PROXY
+#sleep 3
+#seth send $CLIPPER_CALC_PSM 'deny(address)' $ETH_FROM
+#sleep 3
 
-echo "GEM_JOIN_PSM=$GEM_JOIN_PSM"
+echo "GEM_JOIN=$GEM_JOIN_PSM"
 echo "PSM=$PSM"
-echo "FLIPPER_PSM=$FLIPPER_PSM"
-echo "LERP=$LERP"
+echo "CLIPPER=$CLIPPER_PSM"
+#echo "CLIPPER_CALC=$CLIPPER_CALC_PSM"
