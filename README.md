@@ -49,10 +49,12 @@ Please note this was a conscious decision to avoid dealing with decimal division
 
 ### Mainnet
 
-GemJoin: [0x0A59649758aa4d66E25f08Dd01271e891fe52199](https://etherscan.io/address/0x0A59649758aa4d66E25f08Dd01271e891fe52199#code)  
-PSM: [0x89B78CfA322F6C5dE0aBcEecab66Aee45393cC5A](https://etherscan.io/address/0x89B78CfA322F6C5dE0aBcEecab66Aee45393cC5A#code)  
+USDC GemJoin: [0x0A59649758aa4d66E25f08Dd01271e891fe52199](https://etherscan.io/address/0x0A59649758aa4d66E25f08Dd01271e891fe52199#code)  
+USDC PSM: [0x89B78CfA322F6C5dE0aBcEecab66Aee45393cC5A](https://etherscan.io/address/0x89B78CfA322F6C5dE0aBcEecab66Aee45393cC5A#code)  
+USDP GemJoin: [0x7bbd8cA5e413bCa521C2c80D8d1908616894Cf21](https://etherscan.io/address/0x7bbd8cA5e413bCa521C2c80D8d1908616894Cf21#code)  
+USDP PSM: [0x961Ae24a1Ceba861D1FDf723794f6024Dc5485Cf](https://etherscan.io/address/0x961Ae24a1Ceba861D1FDf723794f6024Dc5485Cf#code)  
 
 ### Kovan
 
-GemJoin: [0x4BA159Ad37FD80D235b4a948A8682747c74fDc0E](https://kovan.etherscan.io/address/0x4BA159Ad37FD80D235b4a948A8682747c74fDc0E#code)  
-PSM: [0xe4dC42e438879987e287A6d9519379936d7b065A](https://kovan.etherscan.io/address/0xe4dC42e438879987e287A6d9519379936d7b065A#code)  
+USDC GemJoin: [0x4BA159Ad37FD80D235b4a948A8682747c74fDc0E](https://kovan.etherscan.io/address/0x4BA159Ad37FD80D235b4a948A8682747c74fDc0E#code)  
+USDC PSM: [0xe4dC42e438879987e287A6d9519379936d7b065A](https://kovan.etherscan.io/address/0xe4dC42e438879987e287A6d9519379936d7b065A#code)  
