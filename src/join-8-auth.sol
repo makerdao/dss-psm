@@ -60,6 +60,7 @@ contract AuthGemJoin8 {
     event Cage();
     event Join(address indexed urn, uint256 amt, address indexed msgSender);
     event Exit(address indexed usr, uint256 amt);
+    event SetImplementation(address indexed implementation, uint256 permitted);
 
     mapping (address => uint256) public implementations;
 
@@ -82,6 +83,7 @@ contract AuthGemJoin8 {
 
     function setImplementation(address implementation, uint256 permitted) public auth {
         implementations[implementation] = permitted;  // 1 live, 0 disable
+        emit SetImplementation(implementation, permitted);
     }
 
     function mul(uint256 x, uint256 y) internal pure returns (uint256 z) {
