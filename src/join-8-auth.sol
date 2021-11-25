@@ -19,7 +19,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pragma solidity >=0.6.12;
+pragma solidity ^0.6.12;
 
 interface VatLike {
     function slip(bytes32, address, int256) external;
@@ -54,12 +54,12 @@ contract AuthGemJoin8 {
     uint256 public immutable dec;
     uint256 public live;  // Access Flag
 
-    // Events
+    // --- Events ---
     event Rely(address indexed usr);
     event Deny(address indexed usr);
-    event Join(address indexed usr, uint256 wad, address indexed msgSender);
-    event Exit(address indexed usr, uint256 wad);
     event Cage();
+    event Join(address indexed urn, uint256 amt, address indexed msgSender);
+    event Exit(address indexed usr, uint256 amt);
 
     mapping (address => uint256) public implementations;
 
@@ -68,11 +68,11 @@ contract AuthGemJoin8 {
         uint256 dec_ = dec = GemLike(gem_).decimals();
         require(dec_ < 18, "AuthGemJoin8/decimals-18-or-higher");
         wards[msg.sender] = 1;
+        emit Rely(msg.sender);
         live = 1;
         setImplementation(GemLike(gem_).erc20Impl(), 1);
         vat = VatLike(vat_);
         ilk = ilk_;
-        emit Rely(msg.sender);
     }
 
     function cage() external auth {
