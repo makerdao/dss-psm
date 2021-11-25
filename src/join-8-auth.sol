@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-/// join-8.sol -- Non-standard token adapters
+/// join-8-auth.sol -- Non-standard token adapters
 
 // Copyright (C) 2018 Rain <rainbreak@riseup.net>
 // Copyright (C) 2018-2020 Maker Ecosystem Growth Holdings, INC.
+// Copyright (C) 2021 Dai Foundation
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -64,8 +65,8 @@ contract AuthGemJoin8 {
 
     constructor(address vat_, bytes32 ilk_, address gem_) public {
         gem = GemLike(gem_);
-        dec = GemLike(gem_).decimals();
-        require(GemLike(gem_).decimals() < 18, "AuthGemJoin8/decimals-18-or-higher");
+        uint256 dec_ = dec = GemLike(gem_).decimals();
+        require(dec_ < 18, "AuthGemJoin8/decimals-18-or-higher");
         wards[msg.sender] = 1;
         live = 1;
         setImplementation(GemLike(gem_).erc20Impl(), 1);
@@ -87,14 +88,14 @@ contract AuthGemJoin8 {
         require(y == 0 || (z = x * y) / y == x, "AuthGemJoin8/overflow");
     }
 
-    function join(address usr, uint256 amt, address msgSender) external auth {
+    function join(address urn, uint256 amt, address msgSender) external auth {
         require(live == 1, "AuthGemJoin8/not-live");
         uint256 wad = mul(amt, 10 ** (18 - dec));
         require(int256(wad) >= 0, "AuthGemJoin8/overflow");
         require(implementations[gem.erc20Impl()] == 1, "AuthGemJoin8/implementation-invalid");
-        vat.slip(ilk, usr, int256(wad));
-        require(gem.transferFrom(msg.sender, address(this), amt), "AuthGemJoin8/failed-transfer");
-        emit Join(usr, amt, msgSender);
+        vat.slip(ilk, urn, int256(wad));
+        require(gem.transferFrom(msgSender, address(this), amt), "AuthGemJoin8/failed-transfer");
+        emit Join(urn, amt, msgSender);
     }
 
     function exit(address usr, uint256 amt) external {
