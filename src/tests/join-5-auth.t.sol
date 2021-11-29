@@ -97,6 +97,11 @@ contract AuthGemJoin5Test is DSTest {
         xmpl.approve(address(authGemJoin), uint256(-1));
     }
 
+    function testFail_tooManyDecimals() public {
+        TestToken xmpl19 = new TestToken("XMPL", 19);
+        new AuthGemJoin5(address(vat), ilk, address(xmpl19));
+    }
+
     function test_join() public {
         assertEq(xmpl.balanceOf(address(authGemJoin)), 0);
         assertEq(vat.gem(ilk, me), 0);
