@@ -128,6 +128,15 @@ contract AuthGemJoinTest is DSTest {
         xmpl.transfer(address(user), 1 ether);
         user.approveGems(address(authGemJoin), 1 ether);
         authGemJoin.join(address(user), 1 ether, address(user));
+
+        assertEq(xmpl.balanceOf(address(authGemJoin)), 1 ether);
+        assertEq(vat.gem(ilk, address(user)), 1 ether);
+        assertEq(xmpl.balanceOf(address(user)), 0);
+
         user.exitGem(1 ether);
+
+        assertEq(xmpl.balanceOf(address(authGemJoin)), 0);
+        assertEq(vat.gem(ilk, address(user)), 0);
+        assertEq(xmpl.balanceOf(address(user)), 1 ether);
     }
 }
