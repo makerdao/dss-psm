@@ -61,7 +61,7 @@ contract AuthGemJoin5 {
     constructor(address vat_, bytes32 ilk_, address gem_) public {
         gem = GemLike(gem_);
         uint256 dec_ = dec = GemLike(gem_).decimals();
-        require(dec_ < 18, "GemJoin5/decimals-18-or-higher");
+        require(dec_ < 18, "AuthGemJoin5/decimals-18-or-higher");
         wards[msg.sender] = 1;
         emit Rely(msg.sender);
         live = 1;
@@ -75,23 +75,23 @@ contract AuthGemJoin5 {
     }
 
     function mul(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        require(y == 0 || (z = x * y) / y == x, "GemJoin5/overflow");
+        require(y == 0 || (z = x * y) / y == x, "AuthGemJoin5/overflow");
     }
 
     function join(address urn, uint256 amt, address msgSender) external auth {
-        require(live == 1, "GemJoin5/not-live");
+        require(live == 1, "AuthGemJoin5/not-live");
         uint256 wad = mul(amt, 10 ** (18 - dec));
-        require(int256(wad) >= 0, "GemJoin5/overflow");
+        require(int256(wad) >= 0, "AuthGemJoin5/overflow");
         vat.slip(ilk, urn, int256(wad));
-        require(gem.transferFrom(msgSender, address(this), amt), "GemJoin5/failed-transfer");
+        require(gem.transferFrom(msgSender, address(this), amt), "AuthGemJoin5/failed-transfer");
         emit Join(urn, amt, msgSender);
     }
 
     function exit(address usr, uint256 amt) external {
         uint256 wad = mul(amt, 10 ** (18 - dec));
-        require(int256(wad) >= 0, "GemJoin5/overflow");
+        require(int256(wad) >= 0, "AuthGemJoin5/overflow");
         vat.slip(ilk, msg.sender, -int256(wad));
-        require(gem.transfer(usr, amt), "GemJoin5/failed-transfer");
+        require(gem.transfer(usr, amt), "AuthGemJoin5/failed-transfer");
         emit Exit(usr, amt);
     }
 }
