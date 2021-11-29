@@ -25,8 +25,8 @@ import {Vow}              from "dss/vow.sol";
 import {GemJoin, DaiJoin} from "dss/join.sol";
 import {Dai}              from "dss/dai.sol";
 
-import "./psm.sol";
-import "./join-5-auth.sol";
+import "../psm.sol";
+import "../join-5-auth.sol";
 
 interface Hevm {
     function warp(uint256) external;
