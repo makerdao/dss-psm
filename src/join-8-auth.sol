@@ -27,8 +27,8 @@ interface VatLike {
 
 interface GemLike {
     function decimals() external view returns (uint8);
-    function transfer(address,uint256) external returns (bool);
-    function transferFrom(address,address,uint256) external returns (bool);
+    function transfer(address, uint256) external returns (bool);
+    function transferFrom(address, address, uint256) external returns (bool);
     function erc20Impl() external view returns (address);
 }
 
