@@ -49,8 +49,8 @@ contract AuthGemJoin5 {
     event Rely(address indexed usr);
     event Deny(address indexed usr);
     event Cage();
-    event Join(address indexed urn, uint256 wad, address indexed msgSender);
-    event Exit(address indexed guy, uint256 wad);
+    event Join(address indexed urn, uint256 amt, address indexed msgSender);
+    event Exit(address indexed usr, uint256 amt);
 
     constructor(address vat_, bytes32 ilk_, address gem_) public {
         gem = GemLike(gem_);
@@ -72,20 +72,20 @@ contract AuthGemJoin5 {
         require(y == 0 || (z = x * y) / y == x, "GemJoin5/overflow");
     }
 
-    function join(address urn, uint256 wad, address msgSender) external auth {
+    function join(address urn, uint256 amt, address msgSender) external auth {
         require(live == 1, "GemJoin5/not-live");
-        uint256 wad18 = mul(wad, 10 ** (18 - dec));
-        require(int256(wad18) >= 0, "GemJoin5/overflow");
-        vat.slip(ilk, urn, int256(wad18));
-        require(gem.transferFrom(msgSender, address(this), wad), "GemJoin5/failed-transfer");
-        emit Join(urn, wad, msgSender);
+        uint256 wad = mul(amt, 10 ** (18 - dec));
+        require(int256(wad) >= 0, "GemJoin5/overflow");
+        vat.slip(ilk, urn, int256(wad));
+        require(gem.transferFrom(msgSender, address(this), amt), "GemJoin5/failed-transfer");
+        emit Join(urn, amt, msgSender);
     }
 
-    function exit(address guy, uint256 wad) external {
-        uint256 wad18 = mul(wad, 10 ** (18 - dec));
-        require(int256(wad18) >= 0, "GemJoin5/overflow");
-        vat.slip(ilk, msg.sender, -int256(wad18));
-        require(gem.transfer(guy, wad), "GemJoin5/failed-transfer");
-        emit Exit(guy, wad);
+    function exit(address usr, uint256 amt) external {
+        uint256 wad = mul(amt, 10 ** (18 - dec));
+        require(int256(wad) >= 0, "GemJoin5/overflow");
+        vat.slip(ilk, msg.sender, -int256(wad));
+        require(gem.transfer(usr, amt), "GemJoin5/failed-transfer");
+        emit Exit(usr, amt);
     }
 }
