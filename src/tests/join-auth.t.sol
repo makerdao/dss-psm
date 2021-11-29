@@ -29,12 +29,6 @@ interface Hevm {
     function store(address,bytes32,bytes32) external;
 }
 
-contract TestVat is Vat {
-    function mint(address usr, uint256 rad) public {
-        dai[usr] += rad;
-    }
-}
-
 contract User {
 
     AuthGemJoin public authGemJoin;
@@ -67,7 +61,7 @@ contract AuthGemJoinTest is DSTest {
 
     address me;
 
-    TestVat     vat;
+    Vat         vat;
     DSToken     xmpl;
     AuthGemJoin authGemJoin;
 
@@ -82,7 +76,7 @@ contract AuthGemJoinTest is DSTest {
 
         me = address(this);
 
-        vat = new TestVat();
+        vat = new Vat();
 
         xmpl = new DSToken("XMPL");
         xmpl.mint(1000 ether);
@@ -108,7 +102,7 @@ contract AuthGemJoinTest is DSTest {
         User user = new User(authGemJoin);
         xmpl.transfer(address(user), 1 ether);
         user.approveGems(address(authGemJoin), 1 ether);
-        
+
         user.joinGem(1 ether);
     }
     
