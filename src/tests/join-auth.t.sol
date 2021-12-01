@@ -106,6 +106,22 @@ contract AuthGemJoinTest is DSTest {
         assertEq(xmpl.balanceOf(me), balBefore - 1 ether);
     }
     
+    function test_joinForOther() public {
+        User user = new User(authGemJoin);
+        xmpl.transfer(address(user), 1 ether);
+        user.approveGems(address(authGemJoin), 1 ether);
+        
+        assertEq(xmpl.balanceOf(address(authGemJoin)), 0 ether);
+        assertEq(vat.gem(ilk, address(user)), 0 ether);
+        assertEq(xmpl.balanceOf(address(user)), 1 ether);
+        
+        authGemJoin.join(address(user), 1 ether, address(user));
+
+        assertEq(xmpl.balanceOf(address(authGemJoin)), 1 ether);
+        assertEq(vat.gem(ilk, address(user)), 1 ether);
+        assertEq(xmpl.balanceOf(address(user)), 0);
+    }
+    
     function test_joinNotAuthorized() public {
         User user = new User(authGemJoin);
         xmpl.transfer(address(user), 1 ether);
@@ -113,6 +129,7 @@ contract AuthGemJoinTest is DSTest {
 
         assertTrue(!user.try_joinGem(1 ether));
     }
+
     
     function test_exit() public {
         authGemJoin.join(me, 1 ether, me);
