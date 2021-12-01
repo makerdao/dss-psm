@@ -114,6 +114,11 @@ contract AuthGemJoin8Test is DSTest {
         string memory sig = "join(address,uint256,address)";
         (ok,) = address(authGemJoin).call(abi.encodeWithSignature(sig, me, wad, me));
     }
+    
+    function try_Exit(uint256 wad) internal returns (bool ok) {
+        string memory sig = "exit(address,uint256)";
+        (ok,) = address(authGemJoin).call(abi.encodeWithSignature(sig, me, wad));
+    }
 
     function testFail_tooManyDecimals() public {
         TestToken xmpl19 = new TestToken("XMPL", 19);
@@ -175,13 +180,13 @@ contract AuthGemJoin8Test is DSTest {
         assertTrue(!user.try_joinGem(1 * XMPL_WAD));
     }
 
-    function testFail_joinWithUnauthImpl() public {
+    function test_cannotJoinWithUnauthImpl() public {
         assertEq(xmpl.balanceOf(address(authGemJoin)), 0);
         assertEq(vat.gem(ilk, me), 0);
         authGemJoin.setImplementation(address(0), 0);
         assertEq(authGemJoin.implementations(address(0)), 0);
 
-        authGemJoin.join(me, 1 * XMPL_WAD, me);
+        assertTrue(!try_Join(1 * XMPL_WAD));
     }
 
     function test_cannotJoinAfterCage() public {
@@ -225,7 +230,7 @@ contract AuthGemJoin8Test is DSTest {
         assertEq(xmpl.balanceOf(address(user)), 1 * XMPL_WAD);
     }
 
-    function testFail_exitWithUnauthImpl() public {
+    function test_cannotExitWithUnauthImpl() public {
         authGemJoin.join(me, 1 * XMPL_WAD, me);
 
         assertEq(xmpl.balanceOf(address(authGemJoin)), 1 * XMPL_WAD);
@@ -233,7 +238,7 @@ contract AuthGemJoin8Test is DSTest {
         authGemJoin.setImplementation(address(0), 0);
         assertEq(authGemJoin.implementations(address(0)), 0);
 
-        authGemJoin.exit(me, 1 * XMPL_WAD);
+        assertTrue(!try_Exit(1 * XMPL_WAD));
     }
 
     function test_canExitAfterCage() public {
