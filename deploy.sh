@@ -20,7 +20,7 @@ dapp --use solc:0.6.12 build
 
 echo "Deploying contracts..."
 
-# Deploy AuthGemJoin5
+# Deploy Gem Join
 GEM_JOIN_PSM=$(dapp create $GEMJOIN $MCD_VAT $ILK $TOKEN)
 sleep 3     # Sleeps are added so the block can propagate
 
@@ -34,8 +34,9 @@ CLIPPER_PSM=$(seth --to-address $CLIPPER_PSM_NO_CHECK)
 sleep 3
 
 # Deploy new Clip Calc
-#CLIPPER_CALC_PSM=$(dapp create lib/dss/src/abaci.sol:StairstepExponentialDecrease)
-#sleep 3
+CLIPPER_CALC_NO_CHECK=$(TX=$(seth send $CALC_FAB 'newStairstepExponentialDecrease(address)(address)' $MCD_PAUSE_PROXY --async) && seth receipt $TX logs | jq -r '.[0].address')
+CLIPPER_CALC=$(seth --to-address $CLIPPER_CALC_NO_CHECK)
+sleep 3
 
 # Set up permissions
 echo "Setting up permissions..."
@@ -52,12 +53,7 @@ sleep 3
 seth send $PSM 'deny(address)' $ETH_FROM
 sleep 3
 
-#seth send $CLIPPER_CALC_PSM 'rely(address)' $MCD_PAUSE_PROXY
-#sleep 3
-#seth send $CLIPPER_CALC_PSM 'deny(address)' $ETH_FROM
-#sleep 3
-
 echo "GEM_JOIN=$GEM_JOIN_PSM"
 echo "PSM=$PSM"
 echo "CLIPPER=$CLIPPER_PSM"
-#echo "CLIPPER_CALC=$CLIPPER_CALC_PSM"
+echo "CLIPPER_CALC=$CLIPPER_CALC"
