@@ -94,6 +94,11 @@ contract AuthGemJoinTest is DSTest {
         xmpl.approve(address(authGemJoin), uint256(-1));
     }
 
+    function try_Join(uint256 wad) internal returns (bool ok) {
+        string memory sig = "join(address,uint256,address)";
+        (ok,) = address(authGemJoin).call(abi.encodeWithSignature(sig, me, wad, me));
+    }
+
     function test_join() public {
         assertEq(xmpl.balanceOf(address(authGemJoin)), 0);
         assertEq(vat.gem(ilk, me), 0);
@@ -130,6 +135,10 @@ contract AuthGemJoinTest is DSTest {
         assertTrue(!user.try_joinGem(1 ether));
     }
 
+    function test_cannotJoinAfterCage() public {
+        authGemJoin.cage();
+        assertTrue(!try_Join(1 ether));
+    }
     
     function test_exit() public {
         authGemJoin.join(me, 1 ether, me);
@@ -165,5 +174,21 @@ contract AuthGemJoinTest is DSTest {
         assertEq(xmpl.balanceOf(address(authGemJoin)), 0);
         assertEq(vat.gem(ilk, address(user)), 0);
         assertEq(xmpl.balanceOf(address(user)), 1 ether);
+    }
+
+    function test_canExitAfterCage() public {
+        authGemJoin.join(me, 1 ether, me);
+
+        assertEq(xmpl.balanceOf(address(authGemJoin)), 1 ether);
+        assertEq(vat.gem(ilk, me), 1 ether);
+        uint256 balBefore = xmpl.balanceOf(me);
+
+        authGemJoin.cage();
+
+        authGemJoin.exit(me, 1 ether);
+
+        assertEq(xmpl.balanceOf(address(authGemJoin)), 0);
+        assertEq(vat.gem(ilk, me), 0);
+        assertEq(xmpl.balanceOf(me), balBefore + 1 ether);
     }
 }

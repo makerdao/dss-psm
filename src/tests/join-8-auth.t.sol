@@ -110,6 +110,11 @@ contract AuthGemJoin8Test is DSTest {
         xmpl.approve(address(authGemJoin), uint256(-1));
     }
 
+    function try_Join(uint256 wad) internal returns (bool ok) {
+        string memory sig = "join(address,uint256,address)";
+        (ok,) = address(authGemJoin).call(abi.encodeWithSignature(sig, me, wad, me));
+    }
+
     function testFail_tooManyDecimals() public {
         TestToken xmpl19 = new TestToken("XMPL", 19);
         new AuthGemJoin8(address(vat), ilk, address(xmpl19));
@@ -178,6 +183,11 @@ contract AuthGemJoin8Test is DSTest {
 
         authGemJoin.join(me, 1 * XMPL_WAD, me);
     }
+
+    function test_cannotJoinAfterCage() public {
+        authGemJoin.cage();
+        assertTrue(!try_Join(1 * XMPL_WAD));
+    }
     
     function test_exit() public {
         authGemJoin.join(me, 1 * XMPL_WAD, me);
@@ -224,5 +234,21 @@ contract AuthGemJoin8Test is DSTest {
         assertEq(authGemJoin.implementations(address(0)), 0);
 
         authGemJoin.exit(me, 1 * XMPL_WAD);
+    }
+
+    function test_canExitAfterCage() public {
+        authGemJoin.join(me, 1 * XMPL_WAD, me);
+
+        assertEq(xmpl.balanceOf(address(authGemJoin)), 1 * XMPL_WAD);
+        assertEq(vat.gem(ilk, me), 1 ether);
+        uint256 balBefore = xmpl.balanceOf(me);
+
+        authGemJoin.cage();
+
+        authGemJoin.exit(me, 1 * XMPL_WAD);
+
+        assertEq(xmpl.balanceOf(address(authGemJoin)), 0);
+        assertEq(vat.gem(ilk, me), 0);
+        assertEq(xmpl.balanceOf(me), balBefore + 1 * XMPL_WAD);
     }
 }
