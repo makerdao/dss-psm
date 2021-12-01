@@ -137,11 +137,13 @@ contract AuthGemJoin8Test is DSTest {
     function test_join() public {
         assertEq(xmpl.balanceOf(address(authGemJoin)), 0);
         assertEq(vat.gem(ilk, me), 0);
+        uint256 balBefore = xmpl.balanceOf(me);
 
         authGemJoin.join(me, 1 * XMPL_WAD, me);
 
         assertEq(xmpl.balanceOf(address(authGemJoin)), 1 * XMPL_WAD);
         assertEq(vat.gem(ilk, me), 1 ether);
+        assertEq(xmpl.balanceOf(me), balBefore - 1 * XMPL_WAD);
     }
     
     function test_joinNotAuthorized() public {
@@ -166,11 +168,13 @@ contract AuthGemJoin8Test is DSTest {
 
         assertEq(xmpl.balanceOf(address(authGemJoin)), 1 * XMPL_WAD);
         assertEq(vat.gem(ilk, me), 1 ether);
+        uint256 balBefore = xmpl.balanceOf(me);
 
         authGemJoin.exit(me, 1 * XMPL_WAD);
 
         assertEq(xmpl.balanceOf(address(authGemJoin)), 0);
         assertEq(vat.gem(ilk, me), 0);
+        assertEq(xmpl.balanceOf(me), balBefore + 1 * XMPL_WAD);
     }
     
     function testFail_exitAllowedWithBalance() public {
