@@ -54,6 +54,12 @@ contract User {
         xmpl.approve(who, wad);
     }
 
+    function try_joinGem(uint256 wad) public returns (bool ok) {
+        xmpl.approve(address(authGemJoin), wad);
+        string memory sig = "join(address,uint256,address)";
+        (ok,) = address(authGemJoin).call(abi.encodeWithSignature(sig, address(this), wad, address(this)));
+    }
+
     function joinGem(uint256 wad) public {
         xmpl.approve(address(authGemJoin), wad);
         authGemJoin.join(address(this), wad, address(this));
@@ -138,12 +144,12 @@ contract AuthGemJoin8Test is DSTest {
         assertEq(vat.gem(ilk, me), 1 ether);
     }
     
-    function testFail_joinNotAuthorized() public {
+    function test_joinNotAuthorized() public {
         User user = new User(authGemJoin);
         xmpl.transfer(address(user), 1 * XMPL_WAD);
         user.approveGems(address(authGemJoin), 1 * XMPL_WAD);
         
-        user.joinGem(1 * XMPL_WAD);
+        assertTrue(!user.try_joinGem(1 * XMPL_WAD));
     }
 
     function testFail_joinWithUnauthImpl() public {
