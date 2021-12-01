@@ -181,8 +181,6 @@ contract AuthGemJoin8Test is DSTest {
     }
 
     function test_cannotJoinWithUnauthImpl() public {
-        assertEq(xmpl.balanceOf(address(authGemJoin)), 0);
-        assertEq(vat.gem(ilk, me), 0);
         authGemJoin.setImplementation(address(0), 0);
         assertEq(authGemJoin.implementations(address(0)), 0);
 
@@ -233,8 +231,6 @@ contract AuthGemJoin8Test is DSTest {
     function test_cannotExitWithUnauthImpl() public {
         authGemJoin.join(me, 1 * XMPL_WAD, me);
 
-        assertEq(xmpl.balanceOf(address(authGemJoin)), 1 * XMPL_WAD);
-        assertEq(vat.gem(ilk, me), 1 ether);
         authGemJoin.setImplementation(address(0), 0);
         assertEq(authGemJoin.implementations(address(0)), 0);
 
