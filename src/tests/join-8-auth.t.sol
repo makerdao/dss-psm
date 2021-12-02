@@ -206,11 +206,6 @@ contract AuthGemJoin8Test is DSTest {
         assertEq(xmpl.balanceOf(me), balBefore + 1 * XMPL_WAD);
     }
     
-    function testFail_exitAllowedWithBalance() public {
-        User user = new User(authGemJoin);
-        user.exitGem(1 * XMPL_WAD);
-    }
-    
     function test_exitAllowedWithBalance() public {
         User user = new User(authGemJoin);
         xmpl.transfer(address(user), 1 * XMPL_WAD);
