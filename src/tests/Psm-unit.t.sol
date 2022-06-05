@@ -67,6 +67,11 @@ contract PsmUnitTest is DSSTest {
     int256 constant TOLL_ONE_PCT = 10 ** 16;
     uint256 constant ONE_USDX = 10 ** 6;
 
+    event File(bytes32 indexed what, int256 data);
+    event SellGem(address indexed owner, uint256 value, int256 fee);
+    event BuyGem(address indexed owner, uint256 value, int256 fee);
+    event Exit(address indexed usr, uint256 amt);
+
     function postSetup() internal virtual override {
         vat = new VatMock();
         dai = new DaiMock();
@@ -103,10 +108,14 @@ contract PsmUnitTest is DSSTest {
 
     function testFileTolls() public {
         assertEq(psm.tin(), 0);
+        vm.expectEmit(true, false, false, true);
+        emit File("tin", int256(123));
         psm.file("tin", 123);
         assertEq(psm.tin(), 123);
 
         assertEq(psm.tout(), 0);
+        vm.expectEmit(true, false, false, true);
+        emit File("tout", int256(123));
         psm.file("tout", 123);
         assertEq(psm.tout(), 123);
 
@@ -128,6 +137,9 @@ contract PsmUnitTest is DSSTest {
         assertEq(psm.tout(), -SWAD);
         vm.expectRevert("Psm/out-of-range");
         psm.file("tout", -SWAD - 1);
+
+        vm.expectRevert("Psm/file-unrecognized-param");
+        psm.file("bad value", 123);
     }
 
     function testSellGemNoFee() public {
@@ -138,6 +150,8 @@ contract PsmUnitTest is DSSTest {
         assertEq(vat.dai(vow), 0);
 
         gem.approve(address(psm), type(uint256).max);
+        vm.expectEmit(true, false, false, true);
+        emit SellGem(address(this), 100 * ONE_USDX, 0);
         psm.sellGem(address(this), 100 * ONE_USDX);
 
         assertEq(gem.balanceOf(address(this)), 900 * ONE_USDX);
@@ -163,6 +177,8 @@ contract PsmUnitTest is DSSTest {
         assertEq(vat.dai(vow), 0);
 
         gem.approve(address(psm), type(uint256).max);
+        vm.expectEmit(true, false, false, true);
+        emit SellGem(address(this), 100 * ONE_USDX, int256(WAD));
         psm.sellGem(address(this), 100 * ONE_USDX);
 
         assertEq(gem.balanceOf(address(this)), 900 * ONE_USDX);
@@ -183,6 +199,8 @@ contract PsmUnitTest is DSSTest {
         assertEq(vat.sin(vow), 0);
 
         gem.approve(address(psm), type(uint256).max);
+        vm.expectEmit(true, false, false, true);
+        emit SellGem(address(this), 100 * ONE_USDX, -int256(WAD));
         psm.sellGem(address(this), 100 * ONE_USDX);
 
         assertEq(gem.balanceOf(address(this)), 900 * ONE_USDX);
@@ -197,6 +215,8 @@ contract PsmUnitTest is DSSTest {
         gem.approve(address(psm), type(uint256).max);
         psm.sellGem(address(this), 100 * ONE_USDX);
         dai.approve(address(psm), 40 ether);
+        vm.expectEmit(true, false, false, true);
+        emit BuyGem(address(this), 40 * ONE_USDX, 0);
         psm.buyGem(address(this), 40 * ONE_USDX);
 
         assertEq(gem.balanceOf(address(this)), 940 * ONE_USDX);
@@ -224,6 +244,8 @@ contract PsmUnitTest is DSSTest {
         assertEq(art1, 100 ether);
 
         dai.approve(address(psm), 44 ether);
+        vm.expectEmit(true, false, false, true);
+        emit BuyGem(address(this), 40 * ONE_USDX, 4 * int256(WAD));
         psm.buyGem(address(this), 40 * ONE_USDX);
 
         assertEq(gem.balanceOf(address(this)), 940 * ONE_USDX);
@@ -250,6 +272,8 @@ contract PsmUnitTest is DSSTest {
         assertEq(ink1, 100 ether);
         assertEq(art1, 100 ether);
 
+        vm.expectEmit(true, false, false, true);
+        emit BuyGem(address(this), 40 * ONE_USDX, -4 * int256(WAD));
         psm.buyGem(address(this), 40 * ONE_USDX);
 
         assertEq(gem.balanceOf(address(this)), 940 * ONE_USDX);
