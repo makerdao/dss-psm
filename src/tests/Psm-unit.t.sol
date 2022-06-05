@@ -50,7 +50,7 @@ contract User {
 
 }
 
-contract PsmTest is DSSTest {
+contract PsmUnitTest is DSSTest {
 
     VatMock vat;
     DaiJoinMock daiJoin;
