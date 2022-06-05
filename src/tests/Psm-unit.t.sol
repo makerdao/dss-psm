@@ -172,6 +172,27 @@ contract PsmTest is DSSTest {
         assertEq(vat.dai(vow), RAD);
     }
 
+    function testSellGemNegativeFee() public {
+        psm.file("tin", -TOLL_ONE_PCT);     // Pay the user 1%
+
+        assertEq(gem.balanceOf(address(this)), 1000 * ONE_USDX);
+        assertEq(vat.gem(ILK, address(this)), 0);
+        assertEq(vat.dai(address(this)), 0);
+        assertEq(dai.balanceOf(address(this)), 0);
+        assertEq(vat.dai(vow), 0);
+        assertEq(vat.sin(vow), 0);
+
+        gem.approve(address(psm), type(uint256).max);
+        psm.sellGem(address(this), 100 * ONE_USDX);
+
+        assertEq(gem.balanceOf(address(this)), 900 * ONE_USDX);
+        assertEq(vat.gem(ILK, address(this)), 0);
+        assertEq(vat.dai(address(this)), 0);
+        assertEq(dai.balanceOf(address(this)), 101 ether);
+        assertEq(vat.dai(vow), 0);
+        assertEq(vat.sin(vow), RAD);
+    }
+
     function testSwapBothNoFee() public {
         gem.approve(address(psm), type(uint256).max);
         psm.sellGem(address(this), 100 * ONE_USDX);
@@ -208,6 +229,33 @@ contract PsmTest is DSSTest {
         assertEq(gem.balanceOf(address(this)), 940 * ONE_USDX);
         assertEq(dai.balanceOf(address(this)), 51 ether);
         assertEq(vat.dai(vow),  9 * RAD);
+        (uint256 ink2, uint256 art2) = vat.urns(ILK, address(psm));
+        assertEq(ink2, 60 ether);
+        assertEq(art2, 60 ether);
+    }
+
+    function testSwapBothNegativeFees() public {
+        psm.file("tin", -5 * TOLL_ONE_PCT);
+        psm.file("tout", -10 * TOLL_ONE_PCT);
+        gem.approve(address(psm), type(uint256).max);
+        dai.approve(address(psm), type(uint256).max);
+
+        psm.sellGem(address(this), 100 * ONE_USDX);
+
+        assertEq(gem.balanceOf(address(this)), 900 * ONE_USDX);
+        assertEq(dai.balanceOf(address(this)), 105 ether);
+        assertEq(vat.dai(vow), 0);
+        assertEq(vat.sin(vow), 5 * RAD);
+        (uint256 ink1, uint256 art1) = vat.urns(ILK, address(psm));
+        assertEq(ink1, 100 ether);
+        assertEq(art1, 100 ether);
+
+        psm.buyGem(address(this), 40 * ONE_USDX);
+
+        assertEq(gem.balanceOf(address(this)), 940 * ONE_USDX);
+        assertEq(dai.balanceOf(address(this)), 69 ether);
+        assertEq(vat.dai(vow), 0);
+        assertEq(vat.sin(vow), 9 * RAD);
         (uint256 ink2, uint256 art2) = vat.urns(ILK, address(psm));
         assertEq(ink2, 60 ether);
         assertEq(art2, 60 ether);
