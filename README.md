@@ -6,6 +6,8 @@ The official implementation of the [Peg Stability Module](https://forum.makerdao
 
 `Psm` allows you to either call `sellGem()` or `buyGem()` to trade ERC20 DAI for the gem or vice versa. Upon calling one of these functions the PSM vault will either lock gems in the join adapter, take out a dai loan and issue ERC20 DAI to the specified user or do that process in reverse.
 
+`Psm` can charge either a positive or negative fee in both directions. Positive fees correspond to the user paying the protocol for using the PSM. Negative fees correspond to the protocol paying the user for using the PSM.
+
 #### Approvals
 
 The PSM requires ERC20 approvals to pull in the tokens.
@@ -33,7 +35,7 @@ When calling `buyGem()`, you specify the amount of the gem you want to recieve. 
 
 Please note this was a conscious decision to avoid dealing with decimal division and rounding leftovers. 
 
-## Contracts
+## Old Contracts [V1]
 
 ### Mainnet
 
