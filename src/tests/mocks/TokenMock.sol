@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity >=0.8.0;
 
-contract DaiMock {
+contract TokenMock {
     mapping (address => uint)                      public balanceOf;
     mapping (address => mapping (address => uint)) public allowance;
+    uint8                                          public decimals = 6;
 
     function add(uint256 x, uint256 y) internal pure returns (uint256 z) {
         unchecked {
@@ -27,9 +28,9 @@ contract DaiMock {
     function transferFrom(address src, address dst, uint256 wad)
         public returns (bool)
     {
-        require(balanceOf[src] >= wad, "Dai/insufficient-balance");
+        require(balanceOf[src] >= wad, "Gem/insufficient-balance");
         if (src != msg.sender && allowance[src][msg.sender] != type(uint256).max) {
-            require(allowance[src][msg.sender] >= wad, "Dai/insufficient-allowance");
+            require(allowance[src][msg.sender] >= wad, "Gem/insufficient-allowance");
             allowance[src][msg.sender] = sub(allowance[src][msg.sender], wad);
         }
         balanceOf[src] = sub(balanceOf[src], wad);
@@ -40,9 +41,9 @@ contract DaiMock {
         balanceOf[usr] = add(balanceOf[usr], wad);
     }
     function burn(address usr, uint256 wad) external {
-        require(balanceOf[usr] >= wad, "Dai/insufficient-balance");
+        require(balanceOf[usr] >= wad, "Gem/insufficient-balance");
         if (usr != msg.sender && allowance[usr][msg.sender] != type(uint256).max) {
-            require(allowance[usr][msg.sender] >= wad, "Dai/insufficient-allowance");
+            require(allowance[usr][msg.sender] >= wad, "Gem/insufficient-allowance");
             allowance[usr][msg.sender] = sub(allowance[usr][msg.sender], wad);
         }
         balanceOf[usr] = sub(balanceOf[usr], wad);

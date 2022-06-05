@@ -87,6 +87,8 @@ contract VatMock {
         urns[i][u] = urn;
 
         debt = add(debt, dtab);
+
+        require(either(dart <= 0, debt <= Line), "Vat/ceiling-exceeded");
     }
 
     function move(address src, address dst, uint256 rad) external {
