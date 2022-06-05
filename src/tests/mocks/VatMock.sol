@@ -20,34 +20,34 @@ contract VatMock {
 
     function add(uint256 x, uint256 y) internal pure returns (uint256 z) {
         unchecked {
-            require((z = x + y) >= x);
+            require((z = x + y) >= x, "Vat/overflow");
         }
     }
     function add(uint256 x, int256 y) internal pure returns (uint256 z) {
         unchecked {
             z = x + uint256(y);
         }
-        require(y >= 0 || z <= x);
-        require(y <= 0 || z >= x);
+        require(y >= 0 || z <= x, "Vat/underflow");
+        require(y <= 0 || z >= x, "Vat/overflow");
     }
     function sub(uint256 x, uint256 y) internal pure returns (uint256 z) {
         unchecked {
-            require((z = x - y) <= x);
+            require((z = x - y) <= x, "Vat/underflow");
         }
     }
     function sub(uint256 x, int256 y) internal pure returns (uint256 z) {
         unchecked {
             z = x - uint256(y);
         }
-        require(y <= 0 || z <= x);
-        require(y >= 0 || z >= x);
+        require(y <= 0 || z <= x, "Vat/underflow");
+        require(y >= 0 || z >= x, "Vat/overflow");
     }
     function mul(uint256 x, int256 y) internal pure returns (int256 z) {
         unchecked {
             z = int256(x) * y;
         }
-        require(int256(x) >= 0);
-        require(y == 0 || z / y == int256(x));
+        require(int256(x) >= 0, "Vat/overflow");
+        require(y == 0 || z / y == int256(x), "Vat/overflow");
     }
 
     function either(bool x, bool y) internal pure returns (bool z) {

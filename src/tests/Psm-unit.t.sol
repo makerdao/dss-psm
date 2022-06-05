@@ -274,5 +274,28 @@ contract PsmTest is DSSTest {
         dai.approve(address(psm), type(uint256).max);
         psm.buyGem(address(this), 0);
     }
+
+    function testExit() public {
+        // Add some gems to psm
+        gem.approve(address(psm), type(uint256).max);
+        psm.sellGem(address(this), 100 * ONE_USDX);
+
+        // I got some gems somehow
+        vat.slip(ILK, address(this), int256(50 ether));
+
+        // Can exit at 1:1
+        assertEq(vat.gem(ILK, address(this)), 50 ether);
+        assertEq(gem.balanceOf(address(123)), 0);
+
+        psm.exit(address(123), 50 * ONE_USDX);
+
+        assertEq(vat.gem(ILK, address(this)), 0);
+        assertEq(gem.balanceOf(address(123)), 50 * ONE_USDX);
+    }
+
+    function testExitMissingGems() public {
+        vm.expectRevert("Vat/underflow");
+        psm.exit(address(123), 50 * ONE_USDX);
+    }
     
 }
