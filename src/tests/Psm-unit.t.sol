@@ -16,22 +16,11 @@
 
 pragma solidity ^0.8.14;
 
-import "ds-test/test.sol";
+import "dss-test/DSSTest.sol";
 import "ds-value/value.sol";
 import "ds-token/token.sol";
-import {Vat}              from "dss/vat.sol";
-import {Spotter}          from "dss/spot.sol";
-import {Vow}              from "dss/vow.sol";
-import {GemJoin, DaiJoin} from "dss/join.sol";
-import {Dai}              from "dss/dai.sol";
 
-import "../psm.sol";
-import "../join-5-auth.sol";
-
-interface Hevm {
-    function warp(uint256) external;
-    function store(address,bytes32,bytes32) external;
-}
+import {Psm} from "../Psm.sol";
 
 contract TestToken is DSToken {
 
@@ -41,33 +30,9 @@ contract TestToken is DSToken {
 
 }
 
-contract TestVat is Vat {
-    function mint(address usr, uint256 rad) public {
-        dai[usr] += rad;
-    }
-}
-
-contract TestVow is Vow {
-    constructor(address vat, address flapper, address flopper)
-        public Vow(vat, flapper, flopper) {}
-    // Total deficit
-    function Awe() public view returns (uint256) {
-        return vat.sin(address(this));
-    }
-    // Total surplus
-    function Joy() public view returns (uint256) {
-        return vat.dai(address(this));
-    }
-    // Unqueued, pre-auction debt
-    function Woe() public view returns (uint256) {
-        return sub(sub(Awe(), Sin), Ash);
-    }
-}
-
 contract User {
 
     Dai public dai;
-    AuthGemJoin5 public gemJoin;
     DssPsm public psm;
 
     constructor(Dai dai_, AuthGemJoin5 gemJoin_, DssPsm psm_) public {
@@ -88,15 +53,10 @@ contract User {
 
 }
 
-contract DssPsmTest is DSTest {
-    
-    Hevm hevm;
+contract DssPsmTest is DSSTest {
 
-    address me;
-
-    TestVat vat;
-    Spotter spot;
-    TestVow vow;
+    VatMock vat;
+    address vow;
     DSValue pip;
     TestToken usdx;
     DaiJoin daiJoin;
