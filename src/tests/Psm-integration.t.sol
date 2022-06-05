@@ -76,5 +76,65 @@ contract PsmIntegrationTest is DSSTest {
         assertEq(ink, 25 ether);
         assertEq(art, 25 ether);
     }
+
+    function testSwapFees() public {
+        psm.file("tin", 10 * TOLL_ONE_PCT);
+        psm.file("tout", 10 * TOLL_ONE_PCT);
+        uint256 vowDai = mcd.vat().dai(address(mcd.vow()));
+
+        assertEq(usdc.balanceOf(address(this)), 200 * ONE_USDC);
+        assertEq(mcd.dai().balanceOf(address(this)), 0);
+        (uint256 ink, uint256 art) = mcd.vat().urns(ILK, address(psm));
+        assertEq(ink, 0);
+        assertEq(art, 0);
+
+        psm.sellGem(address(this), 50 * ONE_USDC);
+
+        assertEq(usdc.balanceOf(address(this)), 150 * ONE_USDC);
+        assertEq(mcd.dai().balanceOf(address(this)), 45 ether);
+        (ink, art) = mcd.vat().urns(ILK, address(psm));
+        assertEq(ink, 50 ether);
+        assertEq(art, 50 ether);
+        assertEq(mcd.vat().dai(address(mcd.vow())), vowDai + 5 * RAD);
+
+        psm.buyGem(address(this), 30 * ONE_USDC);
+
+        assertEq(usdc.balanceOf(address(this)), 180 * ONE_USDC);
+        assertEq(mcd.dai().balanceOf(address(this)), 12 ether);
+        (ink, art) = mcd.vat().urns(ILK, address(psm));
+        assertEq(ink, 20 ether);
+        assertEq(art, 20 ether);
+        assertEq(mcd.vat().dai(address(mcd.vow())), vowDai + 8 * RAD);
+    }
+
+    function testSwapNegativeFees() public {
+        psm.file("tin", -10 * TOLL_ONE_PCT);
+        psm.file("tout", -10 * TOLL_ONE_PCT);
+        uint256 vowSin = mcd.vat().sin(address(mcd.vow()));
+
+        assertEq(usdc.balanceOf(address(this)), 200 * ONE_USDC);
+        assertEq(mcd.dai().balanceOf(address(this)), 0);
+        (uint256 ink, uint256 art) = mcd.vat().urns(ILK, address(psm));
+        assertEq(ink, 0);
+        assertEq(art, 0);
+
+        psm.sellGem(address(this), 50 * ONE_USDC);
+
+        assertEq(usdc.balanceOf(address(this)), 150 * ONE_USDC);
+        assertEq(mcd.dai().balanceOf(address(this)), 55 ether);
+        (ink, art) = mcd.vat().urns(ILK, address(psm));
+        assertEq(ink, 50 ether);
+        assertEq(art, 50 ether);
+        assertEq(mcd.vat().sin(address(mcd.vow())), vowSin + 5 * RAD);
+
+        psm.buyGem(address(this), 30 * ONE_USDC);
+
+        assertEq(usdc.balanceOf(address(this)), 180 * ONE_USDC);
+        assertEq(mcd.dai().balanceOf(address(this)), 28 ether);
+        (ink, art) = mcd.vat().urns(ILK, address(psm));
+        assertEq(ink, 20 ether);
+        assertEq(art, 20 ether);
+        assertEq(mcd.vat().sin(address(mcd.vow())), vowSin + 8 * RAD);
+    }
     
 }
