@@ -49,15 +49,15 @@ contract Psm {
 
     uint256 public tin;         // toll in  [wad]
     uint256 public tout;        // toll out [wad]
+    address public vow;
 
     bytes32     immutable public ilk;
     TokenLike   immutable public gem;
     VatLike     immutable public vat;
     TokenLike   immutable public dai;
     DaiJoinLike immutable public daiJoin;
-    address     immutable public vow;
 
-    uint256 immutable internal to18ConversionFactor;
+    uint256 immutable private to18ConversionFactor;
 
     uint256 constant WAD = 10 ** 18;
     uint256 constant RAY = 10 ** 27;
@@ -66,6 +66,7 @@ contract Psm {
     event Rely(address indexed usr);
     event Deny(address indexed usr);
     event File(bytes32 indexed what, uint256 data);
+    event File(bytes32 indexed what, address data);
     event SellGem(address indexed owner, uint256 value, uint256 fee);
     event BuyGem(address indexed owner, uint256 value, uint256 fee);
     event Exit(address indexed usr, uint256 amt);
@@ -75,7 +76,7 @@ contract Psm {
         _;
     }
 
-    constructor(bytes32 _ilk, address _gem, address _daiJoin, address _vow) {
+    constructor(bytes32 _ilk, address _gem, address _daiJoin) {
         wards[msg.sender] = 1;
         emit Rely(msg.sender);
         
@@ -84,7 +85,6 @@ contract Psm {
         daiJoin = DaiJoinLike(_daiJoin);
         vat = VatLike(daiJoin.vat());
         dai = TokenLike(daiJoin.dai());
-        vow = _vow;
 
         to18ConversionFactor = 10 ** (18 - gem.decimals());
 
@@ -106,6 +106,13 @@ contract Psm {
     function file(bytes32 what, uint256 data) external auth {
         if (what == "tin") tin = data;
         else if (what == "tout") tout = data;
+        else revert("Psm/file-unrecognized-param");
+
+        emit File(what, data);
+    }
+
+    function file(bytes32 what, address data) external auth {
+        if (what == "vow") vow = data;
         else revert("Psm/file-unrecognized-param");
 
         emit File(what, data);
