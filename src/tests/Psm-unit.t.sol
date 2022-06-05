@@ -97,8 +97,37 @@ contract PsmTest is DSSTest {
         checkAuth(address(psm), "Psm");
     }
 
-    function testFile() public {
+    function testFileVow() public {
         checkFileAddress(address(psm), "Psm", ["vow"]);
+    }
+
+    function testFileTolls() public {
+        assertEq(psm.tin(), 0);
+        psm.file("tin", 123);
+        assertEq(psm.tin(), 123);
+
+        assertEq(psm.tout(), 0);
+        psm.file("tout", 123);
+        assertEq(psm.tout(), 123);
+
+        int256 SWAD = int256(WAD);
+        psm.file("tin", SWAD);
+        assertEq(psm.tin(), SWAD);
+        vm.expectRevert("Psm/out-of-range");
+        psm.file("tin", SWAD + 1);
+        psm.file("tin", -SWAD);
+        assertEq(psm.tin(), -SWAD);
+        vm.expectRevert("Psm/out-of-range");
+        psm.file("tin", -SWAD - 1);
+
+        psm.file("tout", SWAD);
+        assertEq(psm.tout(), SWAD);
+        vm.expectRevert("Psm/out-of-range");
+        psm.file("tout", SWAD + 1);
+        psm.file("tout", -SWAD);
+        assertEq(psm.tout(), -SWAD);
+        vm.expectRevert("Psm/out-of-range");
+        psm.file("tout", -SWAD - 1);
     }
 
     function testSellGemNoFee() public {
