@@ -136,5 +136,22 @@ contract PsmIntegrationTest is DSSTest {
         assertEq(art, 20 ether);
         assertEq(mcd.vat().sin(address(mcd.vow())), vowSin + 8 * RAD);
     }
+
+    function testExit() public {
+        // Max out the PSM
+        psm.sellGem(address(this), 100 * ONE_USDC);
+
+        // ... Global Settlement results in us having gems ...
+        mcd.vat().slip(ILK, address(this), int256(50 ether));
+
+        // Can exit at 1:1
+        assertEq(mcd.vat().gem(ILK, address(this)), 50 ether);
+        assertEq(usdc.balanceOf(address(123)), 0);
+
+        psm.exit(address(123), 50 * ONE_USDC);
+
+        assertEq(mcd.vat().gem(ILK, address(this)), 0);
+        assertEq(usdc.balanceOf(address(123)), 50 * ONE_USDC);
+    }
     
 }
