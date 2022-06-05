@@ -94,6 +94,7 @@ contract PsmUnitTest is DSSTest {
         assertEq(address(psm.dai()), address(dai));
         assertEq(address(psm.daiJoin()), address(daiJoin));
 
+        assertEq(psm.wards(address(this)), 1);
         assertEq(vat.can(address(psm), address(daiJoin)), 1);
         assertEq(dai.allowance(address(psm), address(daiJoin)), type(uint256).max);
     }
