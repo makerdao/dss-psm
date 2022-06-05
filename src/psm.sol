@@ -22,6 +22,7 @@ interface VatLike {
     function move(address, address, uint256) external;
     function slip(bytes32, address, int256) external;
     function frob(bytes32, address, address, address, int256, int256) external;
+    function suck(address, address, uint256) external;
 }
 
 interface DaiJoinLike {
@@ -47,8 +48,8 @@ contract Psm {
     // --- Data ---
     mapping (address => uint256) public wards;
 
-    uint256 public tin;         // toll in  [wad]
-    uint256 public tout;        // toll out [wad]
+    int256 public tin;      // toll in  [wad]
+    int256 public tout;     // toll out [wad]
     address public vow;
 
     bytes32     immutable public ilk;
@@ -59,16 +60,16 @@ contract Psm {
 
     uint256 immutable private to18ConversionFactor;
 
-    uint256 constant WAD = 10 ** 18;
+    int256 constant SWAD = 10 ** 18;
     uint256 constant RAY = 10 ** 27;
 
     // --- Events ---
     event Rely(address indexed usr);
     event Deny(address indexed usr);
-    event File(bytes32 indexed what, uint256 data);
+    event File(bytes32 indexed what, int256 data);
     event File(bytes32 indexed what, address data);
-    event SellGem(address indexed owner, uint256 value, uint256 fee);
-    event BuyGem(address indexed owner, uint256 value, uint256 fee);
+    event SellGem(address indexed owner, uint256 value, int256 fee);
+    event BuyGem(address indexed owner, uint256 value, int256 fee);
     event Exit(address indexed usr, uint256 amt);
 
     modifier auth {
@@ -103,7 +104,9 @@ contract Psm {
         emit Deny(usr);
     }
 
-    function file(bytes32 what, uint256 data) external auth {
+    function file(bytes32 what, int256 data) external auth {
+        require(-SWAD <= data && data <= SWAD, "Psm/out-of-range");
+
         if (what == "tin") tin = data;
         else if (what == "tout") tout = data;
         else revert("Psm/file-unrecognized-param");
@@ -132,13 +135,27 @@ contract Psm {
     function sellGem(address usr, uint256 gemAmt) external {
         uint256 gemAmt18 = gemAmt * to18ConversionFactor;
         require(int256(gemAmt18) >= 0, "Psm/overflow");
-        uint256 fee = gemAmt18 * tin / WAD;
-        uint256 daiAmt = gemAmt18 - fee;
 
+        // Transfer in gems and mint dai
         require(gem.transferFrom(msg.sender, address(this), gemAmt), "Psm/failed-transfer");
         vat.slip(ilk, address(this), int256(gemAmt18));
         vat.frob(ilk, address(this), address(this), address(this), int256(gemAmt18), int256(gemAmt18));
-        vat.move(address(this), vow, fee * RAY);
+
+        // Fee calculations
+        int256 fee = int256(gemAmt18) * tin / SWAD;
+        uint256 daiAmt;
+        if (fee >= 0) {
+            // Positive fee - move fee to vow
+            // NOTE: we exclude the case where ufee > gemAmt18 in the tin file constraint
+            uint256 ufee = uint256(fee);
+            daiAmt = gemAmt18 - ufee;
+            vat.move(address(this), vow, ufee * RAY);
+        } else {
+            // Negative fee - pay the user extra from the vow
+            uint256 ufee = uint256(-fee);
+            daiAmt = gemAmt18 + ufee;
+            vat.suck(vow, address(this), ufee * RAY);
+        }
         daiJoin.exit(usr, daiAmt);
 
         emit SellGem(usr, gemAmt, fee);
@@ -147,15 +164,30 @@ contract Psm {
     function buyGem(address usr, uint256 gemAmt) external {
         uint256 gemAmt18 = gemAmt * to18ConversionFactor;
         require(int256(gemAmt18) >= 0, "Psm/overflow");
-        uint256 fee = gemAmt18 * tout / WAD;
-        uint256 daiAmt = gemAmt18 + fee;
 
+        // Fee calculations
+        int256 fee = int256(gemAmt18) * tout / SWAD;
+        uint256 daiAmt;
+        if (fee >= 0) {
+            // Positive fee - move fee to vow below after daiAmt comes in
+            daiAmt = gemAmt18 + uint256(fee);
+        } else {
+            // Negative fee - pay the user extra from the vow
+            // NOTE: we exclude the case where ufee > gemAmt18 in the tout file constraint
+            uint256 ufee = uint256(-fee);
+            daiAmt = gemAmt18 - ufee;
+            vat.suck(vow, address(this), ufee * RAY);
+        }
+
+        // Transfer in dai, repay loan and transfer out gems
         require(dai.transferFrom(msg.sender, address(this), daiAmt), "Psm/failed-transfer");
         daiJoin.join(address(this), daiAmt);
         vat.frob(ilk, address(this), address(this), address(this), -int256(gemAmt18), -int256(gemAmt18));
         vat.slip(ilk, address(this), -int256(gemAmt18));
         require(gem.transfer(usr, gemAmt), "Psm/failed-transfer");
-        vat.move(address(this), vow, fee * RAY);
+        if (fee >= 0) {
+            vat.move(address(this), vow, uint256(fee) * RAY);
+        }
 
         emit BuyGem(usr, gemAmt, fee);
     }

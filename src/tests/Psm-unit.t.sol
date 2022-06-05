@@ -64,7 +64,7 @@ contract PsmTest is DSSTest {
 
     bytes32 constant ILK = "PSM-USDX-A";
 
-    uint256 constant TOLL_ONE_PCT = 10 ** 16;
+    int256 constant TOLL_ONE_PCT = 10 ** 16;
     uint256 constant ONE_USDX = 10 ** 6;
 
     function postSetup() internal virtual override {
