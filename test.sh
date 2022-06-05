@@ -2,7 +2,7 @@
 set -e
 
 if [[ -z "$1" ]]; then
-  dapp --use solc:0.6.12 test
+  forge test
 else
-  dapp --use solc:0.6.12 test --match "$1" -vv
+  dapp test --match "$1" -vvvv
 fi
