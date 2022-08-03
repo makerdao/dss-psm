@@ -21,6 +21,7 @@ import "ds-value/value.sol";
 
 import {DaiJoinMock} from "./mocks/DaiJoinMock.sol";
 import {DaiMock} from "./mocks/DaiMock.sol";
+import {SpotterMock} from "./mocks/SpotterMock.sol";
 import {TokenMock} from "./mocks/TokenMock.sol";
 import {VatMock} from "./mocks/VatMock.sol";
 import {Psm} from "../Psm.sol";
@@ -55,6 +56,7 @@ contract PsmUnitTest is DSSTest {
     VatMock vat;
     DaiJoinMock daiJoin;
     DaiMock dai;
+    SpotterMock spotter;
     address vow;
 
     DSValue pip;
@@ -68,20 +70,23 @@ contract PsmUnitTest is DSSTest {
     uint256 constant ONE_USDX = 10 ** 6;
 
     event File(bytes32 indexed what, int256 data);
-    event SellGem(address indexed owner, uint256 value, int256 fee);
-    event BuyGem(address indexed owner, uint256 value, int256 fee);
+    event SellGem(address indexed owner, uint256 gemsLocked, uint256 daiMinted, int256 fee);
+    event BuyGem(address indexed owner, uint256 gemsUnlocked, uint256 daiBurned, int256 fee);
     event Exit(address indexed usr, uint256 amt);
 
     function postSetup() internal virtual override {
         vat = new VatMock();
         dai = new DaiMock();
+        spotter = new SpotterMock();
         daiJoin = new DaiJoinMock(address(vat), address(dai));
         vow = address(123);
         pip = new DSValue();
+        pip.poke(bytes32(WAD));    // $1
+        spotter.setPip(ILK, address(pip));
         gem = new TokenMock();
         gem.mint(address(this), 1000 * ONE_USDX);
 
-        psm = new Psm(ILK, address(gem), address(daiJoin));
+        psm = new Psm(ILK, address(gem), address(daiJoin), address(spotter));
         psm.file("vow", vow);
 
         vat.file("Line", 1000 * RAD);
@@ -152,7 +157,7 @@ contract PsmUnitTest is DSSTest {
 
         gem.approve(address(psm), type(uint256).max);
         vm.expectEmit(true, false, false, true);
-        emit SellGem(address(this), 100 * ONE_USDX, 0);
+        emit SellGem(address(this), 100 * ONE_USDX, 100 * WAD, 0);
         psm.sellGem(address(this), 100 * ONE_USDX);
 
         assertEq(gem.balanceOf(address(this)), 900 * ONE_USDX);
@@ -179,7 +184,7 @@ contract PsmUnitTest is DSSTest {
 
         gem.approve(address(psm), type(uint256).max);
         vm.expectEmit(true, false, false, true);
-        emit SellGem(address(this), 100 * ONE_USDX, int256(WAD));
+        emit SellGem(address(this), 100 * ONE_USDX, 99 * WAD, int256(WAD));
         psm.sellGem(address(this), 100 * ONE_USDX);
 
         assertEq(gem.balanceOf(address(this)), 900 * ONE_USDX);
@@ -201,7 +206,7 @@ contract PsmUnitTest is DSSTest {
 
         gem.approve(address(psm), type(uint256).max);
         vm.expectEmit(true, false, false, true);
-        emit SellGem(address(this), 100 * ONE_USDX, -int256(WAD));
+        emit SellGem(address(this), 100 * ONE_USDX, 101 * WAD, -int256(WAD));
         psm.sellGem(address(this), 100 * ONE_USDX);
 
         assertEq(gem.balanceOf(address(this)), 900 * ONE_USDX);
@@ -217,7 +222,7 @@ contract PsmUnitTest is DSSTest {
         psm.sellGem(address(this), 100 * ONE_USDX);
         dai.approve(address(psm), 40 ether);
         vm.expectEmit(true, false, false, true);
-        emit BuyGem(address(this), 40 * ONE_USDX, 0);
+        emit BuyGem(address(this), 40 * ONE_USDX, 40 * WAD, 0);
         psm.buyGem(address(this), 40 * ONE_USDX);
 
         assertEq(gem.balanceOf(address(this)), 940 * ONE_USDX);
@@ -246,7 +251,7 @@ contract PsmUnitTest is DSSTest {
 
         dai.approve(address(psm), 44 ether);
         vm.expectEmit(true, false, false, true);
-        emit BuyGem(address(this), 40 * ONE_USDX, 4 * int256(WAD));
+        emit BuyGem(address(this), 40 * ONE_USDX, 44 * WAD, 4 * int256(WAD));
         psm.buyGem(address(this), 40 * ONE_USDX);
 
         assertEq(gem.balanceOf(address(this)), 940 * ONE_USDX);
@@ -274,7 +279,7 @@ contract PsmUnitTest is DSSTest {
         assertEq(art1, 100 ether);
 
         vm.expectEmit(true, false, false, true);
-        emit BuyGem(address(this), 40 * ONE_USDX, -4 * int256(WAD));
+        emit BuyGem(address(this), 40 * ONE_USDX, 36 * WAD, -4 * int256(WAD));
         psm.buyGem(address(this), 40 * ONE_USDX);
 
         assertEq(gem.balanceOf(address(this)), 940 * ONE_USDX);
