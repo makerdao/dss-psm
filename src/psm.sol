@@ -121,16 +121,6 @@ contract Psm {
         emit File(what, data);
     }
 
-    /// @dev hope can be used to transfer control of the PSM vault to another contract
-    ///      This can be used to upgrade the contract
-    function hope(address usr) external auth {
-        vat.hope(usr);
-    }
-
-    function nope(address usr) external auth {
-        vat.nope(usr);
-    }
-
     // --- Primary Functions ---
     function sellGem(address usr, uint256 gemAmt) external {
         uint256 gemAmt18 = gemAmt * to18ConversionFactor;
