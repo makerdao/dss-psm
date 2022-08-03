@@ -6,6 +6,7 @@ contract VatMock {
     uint256 public live = 1;
     uint256 public Line;
     uint256 public debt;
+    uint256 public Art;
 
     struct Urn {
         uint256 ink;   // Locked Collateral  [wad]
@@ -83,6 +84,7 @@ contract VatMock {
 
         gem[i][v] = sub(gem[i][v], dink);
         dai[w]    = add(dai[w],    dtab);
+        Art       = add(Art,       dtab);
 
         urns[i][u] = urn;
 
@@ -112,5 +114,9 @@ contract VatMock {
         dai[v] = add(dai[v], rad);
         sin[u] = add(sin[u], rad);
         debt += rad;
+    }
+
+    function ilks(bytes32) external view returns (uint256, uint256, uint256, uint256, uint256) {
+        return (Art, 0, 0, Line, 0);
     }
 }

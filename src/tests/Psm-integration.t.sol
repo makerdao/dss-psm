@@ -41,7 +41,7 @@ contract PsmIntegrationTest is DSSTest {
     function postSetup() internal virtual override {
         usdc = DSTokenAbstract(mcd.chainlog().getAddress("USDC"));
 
-        psm = new Psm(ILK, address(usdc), address(mcd.daiJoin()));
+        psm = new Psm(ILK, address(usdc), address(mcd.daiJoin()), address(mcd.spotter()));
         psm.file("vow", address(mcd.vow()));
 
         mcd.giveAdminAccess();
