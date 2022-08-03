@@ -361,7 +361,7 @@ contract PsmUnitTest is DSSTest {
     function testSellGemOverLine() public {
         gem.mint(address(this), 1000 * ONE_USDX);
         gem.approve(address(psm), type(uint256).max);
-        vm.expectRevert("Vat/ceiling-exceeded");
+        vm.expectRevert("Psm/buffer-exceeded");     // Will trigger both buffer and DC limits
         psm.sellGem(address(this), 2000 * ONE_USDX);
     }
 
@@ -381,6 +381,16 @@ contract PsmUnitTest is DSSTest {
         psm.sellGem(address(this), 0);
         dai.approve(address(psm), type(uint256).max);
         psm.buyGem(address(this), 0);
+    }
+
+    function testBufferHit() public {
+        // Should only be able to mint to 800
+        psm.file("buff", 200 * RAD);
+
+        gem.mint(address(this), 1000 * ONE_USDX);
+        gem.approve(address(psm), type(uint256).max);
+        vm.expectRevert("Psm/buffer-exceeded");
+        psm.sellGem(address(this), 450 * ONE_USDX); // Should attempt to mint 900 DAI (over the limit)
     }
 
     function testExit() public {

@@ -60,7 +60,7 @@ contract Psm {
 
     int256  public tin;      // toll in  [wad]
     int256  public tout;     // toll out [wad]
-    uint256 public buff;     // A buffer which limits minting within the line
+    uint256 public buff;     // A buffer which limits minting within the line [rad]
     address public vow;
 
     bytes32     immutable public ilk;
@@ -168,7 +168,7 @@ contract Psm {
         // Transfer in gems and mint dai
         (uint256 Art,,, uint256 line,) = vat.ilks(ilk);
         require(gem.transferFrom(msg.sender, address(this), gemAmt), "Psm/failed-transfer");
-        require(Art + mintAmount + buff <= line, "Psm/buffer-exceeded");
+        require((Art + mintAmount) * RAY + buff <= line, "Psm/buffer-exceeded");
         vat.slip(ilk, address(this), _int256(gemAmt18));
         vat.frob(ilk, address(this), address(this), address(this), int256(gemAmt18), _int256(mintAmount));
 
