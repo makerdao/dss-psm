@@ -24,6 +24,7 @@ interface VatLike {
     function frob(bytes32, address, address, address, int256, int256) external;
     function suck(address, address, uint256) external;
     function urns(bytes32, address) external view returns (uint256, uint256);
+    function ilks(bytes32) external view returns (uint256, uint256, uint256, uint256, uint256);
 }
 
 interface DaiJoinLike {
@@ -57,8 +58,9 @@ contract Psm {
     // --- Data ---
     mapping (address => uint256) public wards;
 
-    int256 public tin;      // toll in  [wad]
-    int256 public tout;     // toll out [wad]
+    int256  public tin;      // toll in  [wad]
+    int256  public tout;     // toll out [wad]
+    uint256 public buff;     // A buffer which limits minting within the line
     address public vow;
 
     bytes32     immutable public ilk;
@@ -81,9 +83,11 @@ contract Psm {
     event Deny(address indexed usr);
     event File(bytes32 indexed what, int256 data);
     event File(bytes32 indexed what, address data);
+    event File(bytes32 indexed what, uint256 data);
     event SellGem(address indexed owner, uint256 gemsLocked, uint256 daiMinted, int256 fee);
     event BuyGem(address indexed owner, uint256 gemsUnlocked, uint256 daiBurned, int256 fee);
     event Exit(address indexed usr, uint256 amt);
+    event Rectify(uint256 nav, uint256 debt);
 
     modifier auth {
         require(wards[msg.sender] == 1, "Psm/not-authorized");
@@ -144,6 +148,13 @@ contract Psm {
         emit File(what, data);
     }
 
+    function file(bytes32 what, uint256 data) external auth {
+        if (what == "buff") buff = data;
+        else revert("Psm/file-unrecognized-param");
+
+        emit File(what, data);
+    }
+
     // --- Primary Functions ---
     function sellGem(address usr, uint256 gemAmt) external {
         uint256 gemAmt18;
@@ -155,7 +166,9 @@ contract Psm {
         }
 
         // Transfer in gems and mint dai
+        (uint256 Art,,, uint256 line,) = vat.ilks(ilk);
         require(gem.transferFrom(msg.sender, address(this), gemAmt), "Psm/failed-transfer");
+        require(Art + mintAmount + buff <= line, "Psm/buffer-exceeded");
         vat.slip(ilk, address(this), _int256(gemAmt18));
         vat.frob(ilk, address(this), address(this), address(this), int256(gemAmt18), _int256(mintAmount));
 
@@ -221,6 +234,27 @@ contract Psm {
         require(gem.transfer(usr, gemAmt), "Psm/failed-transfer");
 
         emit Exit(usr, gemAmt);
+    }
+
+    // --- Keeper Functions ---
+    function rectify() external {
+        (address pip,) = spotter.ilks(ilk);
+        (uint256 ink, uint256 debt) = vat.urns(ilk, address(this));
+        uint256 nav = ink * uint256(PipLike(pip).read()) / WAD;
+
+        if (nav >= debt) {
+            // We have a surplus
+            uint256 surplus = nav - debt;
+            vat.frob(ilk, address(this), address(this), address(this), 0, _int256(surplus));
+            vat.move(address(this), vow, surplus * RAY);
+        } else {
+            // We have a deficit
+            uint256 deficit = debt - nav;
+            vat.suck(vow, address(this), deficit * RAY);
+            vat.frob(ilk, address(this), address(this), address(this), 0, -_int256(deficit));
+        }
+
+        emit Rectify(nav, debt);
     }
 
 }

@@ -108,21 +108,22 @@ contract PsmUnitTest is DSSTest {
         checkAuth(address(psm), "Psm");
     }
 
-    function testFileVow() public {
+    function testFile() public {
         checkFileAddress(address(psm), "Psm", ["vow"]);
+        checkFileUint(address(psm), "Psm", ["buff"]);
     }
 
     function testFileTolls() public {
         assertEq(psm.tin(), 0);
         vm.expectEmit(true, false, false, true);
         emit File("tin", int256(123));
-        psm.file("tin", 123);
+        psm.file("tin", int256(123));
         assertEq(psm.tin(), 123);
 
         assertEq(psm.tout(), 0);
         vm.expectEmit(true, false, false, true);
         emit File("tout", int256(123));
-        psm.file("tout", 123);
+        psm.file("tout", int256(123));
         assertEq(psm.tout(), 123);
 
         int256 SWAD = int256(WAD);
@@ -145,7 +146,7 @@ contract PsmUnitTest is DSSTest {
         psm.file("tout", -SWAD - 1);
 
         vm.expectRevert("Psm/file-unrecognized-param");
-        psm.file("bad value", 123);
+        psm.file("bad value", int256(123));
     }
 
     function testSellGemNoFee() public {
@@ -318,7 +319,7 @@ contract PsmUnitTest is DSSTest {
     }
 
     function testSwapBothOtherSmallFee() public {
-        psm.file("tin", 1);
+        psm.file("tin", int256(1));
 
         User user1 = new User(psm);
         gem.transfer(address(user1), 40 * ONE_USDX);
@@ -348,7 +349,7 @@ contract PsmUnitTest is DSSTest {
     }
 
     function testSwapBothSmallFeeInsufficientDai() public {
-        psm.file("tin", 1);        // Very small fee pushes you over the edge
+        psm.file("tin", int256(1));        // Very small fee pushes you over the edge
 
         User user1 = new User(psm);
         gem.transfer(address(user1), 40 * ONE_USDX);
