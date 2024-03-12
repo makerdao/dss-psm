@@ -259,10 +259,11 @@ contract DssYieldBearingPsm {
         int256 tin_ = tin;
         require(tin_ != SHALTED, "DssYieldBearingPsm/sell-gem-halted");
 
+        // NOTE: if `gem` and `asset` have different precision, we expect `gem.convertToAssets()` to return the value in `asset` precision.
         uint256 assetAmt18 = gem.convertToAssets(gemAmt) * to18ConversionFactor;
         int256 sAssetAmt18 = _int256(assetAmt18);
 
-        // Transfer in gems and mint dai
+        // Transfer in gems and mint Dai
         require(gem.transferFrom(msg.sender, address(this), gemAmt), "DssYieldBearingPsm/gem-failed-transfer");
         vat.slip(ilk, address(this), sAssetAmt18);
         vat.frob(ilk, address(this), address(this), address(this), sAssetAmt18, sAssetAmt18);
@@ -295,6 +296,7 @@ contract DssYieldBearingPsm {
         int256 tout_ = tout;
         require(tout_ != SHALTED, "DssYieldBearingPsm/buy-gem-halted");
 
+        // NOTE: if `gem` and `asset` have different precision, we expect `gem.convertToAssets()` to return the value in `asset` precision.
         uint256 assetAmt18 = gem.convertToAssets(gemAmt) * to18ConversionFactor;
         int256 sAssetAmt18 = _int256(assetAmt18);
 
@@ -310,7 +312,7 @@ contract DssYieldBearingPsm {
             vat.suck(vow, address(this), ufee * RAY);
         }
 
-        // Transfer in dai, repay loan and transfer out gems
+        // Transfer in Dai, repay loan and transfer out gems
         require(dai.transferFrom(msg.sender, address(this), daiInWad), "DssYieldBearingPsm/dai-failed-transfer");
         daiJoin.join(address(this), daiInWad);
         vat.frob(ilk, address(this), address(this), address(this), -sAssetAmt18, -sAssetAmt18);
