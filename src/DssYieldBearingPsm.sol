@@ -58,11 +58,9 @@ interface ERC4626Like is ERC20Like {
  */
 contract DssYieldBearingPsm {
     /// @notice Special value provided to indicate swaps are halted.
-    /// @dev This value exists only for compatibility with callers that do not support signed `tin` and `tout`.
-    uint256 public constant HALTED = type(uint256).max;
-    /// @notice Special value for `tin` and/or `tout` to indicate swaps are halted.
+    /// @dev This value is unsigned for compatibility with callers that do not support signed `tin` and `tout`.
     /// @dev Setting `tin` or `tout` to `type(int256).max` will cause sell gem and buy gem functions respectively to revert.
-    int256 public constant SHALTED = type(int256).max;
+    uint256 public constant HALTED = uint256(type(int256).max);
     /// @notice Collateral type identifier.
     bytes32 public immutable ilk;
     /// @notice Dai token.
@@ -195,16 +193,16 @@ contract DssYieldBearingPsm {
      * @dev Swapping fees may not apply due to rounding errors for small swaps where
      *      `gemAmt < 10**gem.decimals() / tin` or
      *      `gemAmt < 10**gem.decimals() / tout`.
-     * @dev Setting `tin` or `tout` to `SHALTED` effectively disables selling and buying gems respectively.
+     * @dev Setting `tin` or `tout` to `HALTED` effectively disables selling and buying gems respectively.
      * @param what The changed parameter name. ["tin", "tout"].
      * @param data The new value of the parameter.
      */
     function file(bytes32 what, int256 data) external auth {
         if (what == "tin") {
-            require(data == SHALTED || (-SWAD <= data && data <= SWAD), "DssYieldBearingPsm/tin-out-of-range");
+            require(uint256(data) == HALTED || (-SWAD <= data && data <= SWAD), "DssYieldBearingPsm/tin-out-of-range");
             tin = data;
         } else if (what == "tout") {
-            require(data == SHALTED || (-SWAD <= data && data <= SWAD), "DssYieldBearingPsm/tout-out-of-range");
+            require(uint256(data) == HALTED || (-SWAD <= data && data <= SWAD), "DssYieldBearingPsm/tout-out-of-range");
             tout = data;
         } else {
             revert("DssYieldBearingPsm/file-unrecognized-param");
@@ -223,15 +221,15 @@ contract DssYieldBearingPsm {
     function file(bytes32 what, uint256 data) external auth {
         if (what == "tin") {
             require(data == HALTED, "DssYieldBearingPsm/tin-out-of-range");
-            tin = SHALTED;
+            tin = _int256(HALTED);
         } else if (what == "tout") {
             require(data == HALTED, "DssYieldBearingPsm/tout-out-of-range");
-            tout = SHALTED;
+            tout = _int256(HALTED);
         } else {
             revert("DssYieldBearingPsm/file-unrecognized-param");
         }
 
-        emit File(what, SHALTED);
+        emit File(what, _int256(HALTED));
     }
     /**
      * @notice Updates a contract parameter.
@@ -257,8 +255,7 @@ contract DssYieldBearingPsm {
      * @return daiOutWad The amount of Dai bought.
      */
     function sellGem(address usr, uint256 gemAmt) external returns (uint256 daiOutWad) {
-        int256 tin_ = tin;
-        require(tin_ != SHALTED, "DssYieldBearingPsm/sell-gem-halted");
+        require(uint256(tin) != HALTED, "DssYieldBearingPsm/sell-gem-halted");
 
         // NOTE: if `gem` and `asset` have different precision, we expect `gem.convertToAssets()` to return the value in `asset` precision.
         uint256 assetAmt18 = gem.convertToAssets(gemAmt) * to18ConversionFactor;
@@ -270,7 +267,7 @@ contract DssYieldBearingPsm {
         vat.frob(ilk, address(this), address(this), address(this), sAssetAmt18, sAssetAmt18);
 
         // Fee calculations
-        int256 fee = sAssetAmt18 * tin_ / SWAD;
+        int256 fee = sAssetAmt18 * tin / SWAD;
         if (fee >= 0) {
             // Positive fee - move fee to vow
             uint256 ufee = uint256(fee);
@@ -294,15 +291,14 @@ contract DssYieldBearingPsm {
      * @return daiInWad The amount of Dai required to sell.
      */
     function buyGem(address usr, uint256 gemAmt) external returns (uint256 daiInWad) {
-        int256 tout_ = tout;
-        require(tout_ != SHALTED, "DssYieldBearingPsm/buy-gem-halted");
+        require(uint256(tout) != HALTED, "DssYieldBearingPsm/buy-gem-halted");
 
         // NOTE: if `gem` and `asset` have different precision, we expect `gem.convertToAssets()` to return the value in `asset` precision.
         uint256 assetAmt18 = gem.convertToAssets(gemAmt) * to18ConversionFactor;
         int256 sAssetAmt18 = _int256(assetAmt18);
 
         // Fee calculations
-        int256 fee = sAssetAmt18 * tout_ / SWAD;
+        int256 fee = sAssetAmt18 * tout / SWAD;
         if (fee >= 0) {
             // Positive fee - move fee to vow below after daiInWad comes in
             daiInWad = assetAmt18 + uint256(fee);

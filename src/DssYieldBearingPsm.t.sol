@@ -104,9 +104,15 @@ contract DssYieldBearingPsmTest is DssTest {
         assertEq(psm.tin(), 123);
 
         vm.expectEmit(true, false, false, true);
-        emit File("tin", psm.SHALTED());
-        psm.file("tin", psm.SHALTED());
-        assertEq(psm.tin(), psm.SHALTED());
+        emit File("tin", int256(psm.HALTED()));
+        psm.file("tin", int256(psm.HALTED()));
+        assertEq(psm.tin(), int256(psm.HALTED()));
+
+        // Try with the uint256 overload
+        vm.expectEmit(true, false, false, true);
+        emit File("tin", int256(psm.HALTED()));
+        psm.file("tin", psm.HALTED());
+        assertEq(psm.tin(), int256(psm.HALTED()));
 
         assertEq(psm.tout(), 0);
         vm.expectEmit(true, false, false, true);
@@ -115,9 +121,15 @@ contract DssYieldBearingPsmTest is DssTest {
         assertEq(psm.tout(), 123);
 
         vm.expectEmit(true, false, false, true);
-        emit File("tout", psm.SHALTED());
-        psm.file("tout", psm.SHALTED());
-        assertEq(psm.tout(), psm.SHALTED());
+        emit File("tout", int256(psm.HALTED()));
+        psm.file("tout", int256(psm.HALTED()));
+        assertEq(psm.tout(), int256(psm.HALTED()));
+
+        // Try with the uint256 overload
+        vm.expectEmit(true, false, false, true);
+        emit File("tout", int256(psm.HALTED()));
+        psm.file("tout", psm.HALTED());
+        assertEq(psm.tout(), int256(psm.HALTED()));
 
         int256 SWAD = int256(WAD);
         psm.file("tin", SWAD);
@@ -398,11 +410,11 @@ contract DssYieldBearingPsmTest is DssTest {
     }
 
     function testRevertSwapWhenHalted() public {
-        psm.file("tout", psm.SHALTED());
+        psm.file("tout", psm.HALTED());
         vm.expectRevert("DssYieldBearingPsm/buy-gem-halted");
         psm.buyGem(address(this), 1);
 
-        psm.file("tin", psm.SHALTED());
+        psm.file("tin", psm.HALTED());
         vm.expectRevert("DssYieldBearingPsm/sell-gem-halted");
         psm.sellGem(address(this), 1);
     }
