@@ -1,5 +1,5 @@
+// SPDX-FileCopyrightText: © 2023 Dai Foundation <www.daifoundation.org>
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2020-2022 Dai Foundation
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -13,8 +13,7 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-pragma solidity ^0.8.14;
+pragma solidity ^0.8.16;
 
 interface VatLike {
     function hope(address) external;
@@ -43,22 +42,21 @@ interface TokenLike {
 // Allows anyone to go between Dai and the Gem by pooling the liquidity
 // An optional fee is charged for incoming and outgoing transfers
 
-contract Psm {
-
+contract DssYieldBearingPsm {
     // --- Data ---
-    mapping (address => uint256) public wards;
+    mapping(address => uint256) public wards;
 
-    int256 public tin;      // toll in  [wad]
-    int256 public tout;     // toll out [wad]
+    int256 public tin; // toll in  [wad]
+    int256 public tout; // toll out [wad]
     address public vow;
 
-    bytes32     immutable public ilk;
-    TokenLike   immutable public gem;
-    VatLike     immutable public vat;
-    TokenLike   immutable public dai;
-    DaiJoinLike immutable public daiJoin;
+    bytes32 public immutable ilk;
+    TokenLike public immutable gem;
+    VatLike public immutable vat;
+    TokenLike public immutable dai;
+    DaiJoinLike public immutable daiJoin;
 
-    uint256 immutable private to18ConversionFactor;
+    uint256 private immutable to18ConversionFactor;
 
     int256 constant SWAD = 10 ** 18;
     uint256 constant RAY = 10 ** 27;
@@ -72,15 +70,15 @@ contract Psm {
     event BuyGem(address indexed owner, uint256 value, int256 fee);
     event Exit(address indexed usr, uint256 amt);
 
-    modifier auth {
-        require(wards[msg.sender] == 1, "Psm/not-authorized");
+    modifier auth() {
+        require(wards[msg.sender] == 1, "DssYieldBearingPsm/not-authorized");
         _;
     }
 
     constructor(bytes32 _ilk, address _gem, address _daiJoin) {
         wards[msg.sender] = 1;
         emit Rely(msg.sender);
-        
+
         ilk = _ilk;
         gem = TokenLike(_gem);
         daiJoin = DaiJoinLike(_daiJoin);
@@ -105,18 +103,18 @@ contract Psm {
     }
 
     function file(bytes32 what, int256 data) external auth {
-        require(-SWAD <= data && data <= SWAD, "Psm/out-of-range");
+        require(-SWAD <= data && data <= SWAD, "DssYieldBearingPsm/out-of-range");
 
         if (what == "tin") tin = data;
         else if (what == "tout") tout = data;
-        else revert("Psm/file-unrecognized-param");
+        else revert("DssYieldBearingPsm/file-unrecognized-param");
 
         emit File(what, data);
     }
 
     function file(bytes32 what, address data) external auth {
         if (what == "vow") vow = data;
-        else revert("Psm/file-unrecognized-param");
+        else revert("DssYieldBearingPsm/file-unrecognized-param");
 
         emit File(what, data);
     }
@@ -124,10 +122,10 @@ contract Psm {
     // --- Primary Functions ---
     function sellGem(address usr, uint256 gemAmt) external {
         uint256 gemAmt18 = gemAmt * to18ConversionFactor;
-        require(int256(gemAmt18) >= 0, "Psm/overflow");
+        require(int256(gemAmt18) >= 0, "DssYieldBearingPsm/overflow");
 
         // Transfer in gems and mint dai
-        require(gem.transferFrom(msg.sender, address(this), gemAmt), "Psm/failed-transfer");
+        require(gem.transferFrom(msg.sender, address(this), gemAmt), "DssYieldBearingPsm/failed-transfer");
         vat.slip(ilk, address(this), int256(gemAmt18));
         vat.frob(ilk, address(this), address(this), address(this), int256(gemAmt18), int256(gemAmt18));
 
@@ -153,7 +151,7 @@ contract Psm {
 
     function buyGem(address usr, uint256 gemAmt) external {
         uint256 gemAmt18 = gemAmt * to18ConversionFactor;
-        require(int256(gemAmt18) >= 0, "Psm/overflow");
+        require(int256(gemAmt18) >= 0, "DssYieldBearingPsm/overflow");
 
         // Fee calculations
         int256 fee = int256(gemAmt18) * tout / SWAD;
@@ -170,11 +168,11 @@ contract Psm {
         }
 
         // Transfer in dai, repay loan and transfer out gems
-        require(dai.transferFrom(msg.sender, address(this), daiAmt), "Psm/failed-transfer");
+        require(dai.transferFrom(msg.sender, address(this), daiAmt), "DssYieldBearingPsm/failed-transfer");
         daiJoin.join(address(this), daiAmt);
         vat.frob(ilk, address(this), address(this), address(this), -int256(gemAmt18), -int256(gemAmt18));
         vat.slip(ilk, address(this), -int256(gemAmt18));
-        require(gem.transfer(usr, gemAmt), "Psm/failed-transfer");
+        require(gem.transfer(usr, gemAmt), "DssYieldBearingPsm/failed-transfer");
         if (fee >= 0) {
             vat.move(address(this), vow, uint256(fee) * RAY);
         }
@@ -185,12 +183,11 @@ contract Psm {
     // --- Global Settlement Support ---
     function exit(address usr, uint256 gemAmt) external {
         uint256 gemAmt18 = gemAmt * to18ConversionFactor;
-        require(int256(gemAmt18) >= 0, "Psm/overflow");
+        require(int256(gemAmt18) >= 0, "DssYieldBearingPsm/overflow");
 
         vat.slip(ilk, msg.sender, -int256(gemAmt18));
-        require(gem.transfer(usr, gemAmt), "Psm/failed-transfer");
+        require(gem.transfer(usr, gemAmt), "DssYieldBearingPsm/failed-transfer");
 
         emit Exit(usr, gemAmt);
     }
-
 }

@@ -1,5 +1,5 @@
+// SPDX-FileCopyrightText: © 2023 Dai Foundation <www.daifoundation.org>
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2022 Dai Foundation
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -13,23 +13,19 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
+pragma solidity ^0.8.16;
 
-pragma solidity ^0.8.14;
-
-import "dss-test/DSSTest.sol";
-import "ds-value/value.sol";
-
+import "dss-test/DssTest.sol";
 import {DaiJoinMock} from "./mocks/DaiJoinMock.sol";
 import {DaiMock} from "./mocks/DaiMock.sol";
 import {TokenMock} from "./mocks/TokenMock.sol";
 import {VatMock} from "./mocks/VatMock.sol";
-import {Psm} from "../Psm.sol";
+import {DssYieldBearingPsm} from "./DssYieldBearingPsm.sol";
 
 contract User {
+    DssYieldBearingPsm public psm;
 
-    Psm public psm;
-
-    constructor(Psm psm_) {
+    constructor(DssYieldBearingPsm psm_) {
         psm = psm_;
 
         psm.gem().approve(address(psm), type(uint256).max);
@@ -47,41 +43,32 @@ contract User {
     function exit(uint256 value) public {
         psm.exit(address(this), value);
     }
-
 }
 
-contract PsmUnitTest is DSSTest {
-
+contract DssYieldBearingPsmTest is DssTest {
     VatMock vat;
     DaiJoinMock daiJoin;
     DaiMock dai;
     address vow;
 
-    DSValue pip;
     TokenMock gem;
 
-    Psm psm;
+    DssYieldBearingPsm psm;
 
     bytes32 constant ILK = "PSM-USDX-A";
 
     int256 constant TOLL_ONE_PCT = 10 ** 16;
     uint256 constant ONE_USDX = 10 ** 6;
 
-    event File(bytes32 indexed what, int256 data);
-    event SellGem(address indexed owner, uint256 value, int256 fee);
-    event BuyGem(address indexed owner, uint256 value, int256 fee);
-    event Exit(address indexed usr, uint256 amt);
-
-    function postSetup() internal virtual override {
+    function setUp() public {
         vat = new VatMock();
         dai = new DaiMock();
         daiJoin = new DaiJoinMock(address(vat), address(dai));
         vow = address(123);
-        pip = new DSValue();
         gem = new TokenMock();
         gem.mint(address(this), 1000 * ONE_USDX);
 
-        psm = new Psm(ILK, address(gem), address(daiJoin));
+        psm = new DssYieldBearingPsm(ILK, address(gem), address(daiJoin));
         psm.file("vow", vow);
 
         vat.file("Line", 1000 * RAD);
@@ -100,11 +87,11 @@ contract PsmUnitTest is DSSTest {
     }
 
     function testRelyDeny() public {
-        checkAuth(address(psm), "Psm");
+        checkAuth(address(psm), "DssYieldBearingPsm");
     }
 
     function testFileVow() public {
-        checkFileAddress(address(psm), "Psm", ["vow"]);
+        checkFileAddress(address(psm), "DssYieldBearingPsm", ["vow"]);
     }
 
     function testFileTolls() public {
@@ -123,23 +110,23 @@ contract PsmUnitTest is DSSTest {
         int256 SWAD = int256(WAD);
         psm.file("tin", SWAD);
         assertEq(psm.tin(), SWAD);
-        vm.expectRevert("Psm/out-of-range");
+        vm.expectRevert("DssYieldBearingPsm/out-of-range");
         psm.file("tin", SWAD + 1);
         psm.file("tin", -SWAD);
         assertEq(psm.tin(), -SWAD);
-        vm.expectRevert("Psm/out-of-range");
+        vm.expectRevert("DssYieldBearingPsm/out-of-range");
         psm.file("tin", -SWAD - 1);
 
         psm.file("tout", SWAD);
         assertEq(psm.tout(), SWAD);
-        vm.expectRevert("Psm/out-of-range");
+        vm.expectRevert("DssYieldBearingPsm/out-of-range");
         psm.file("tout", SWAD + 1);
         psm.file("tout", -SWAD);
         assertEq(psm.tout(), -SWAD);
-        vm.expectRevert("Psm/out-of-range");
+        vm.expectRevert("DssYieldBearingPsm/out-of-range");
         psm.file("tout", -SWAD - 1);
 
-        vm.expectRevert("Psm/file-unrecognized-param");
+        vm.expectRevert("DssYieldBearingPsm/file-unrecognized-param");
         psm.file("bad value", 123);
     }
 
@@ -190,7 +177,7 @@ contract PsmUnitTest is DSSTest {
     }
 
     function testSellGemNegativeFee() public {
-        psm.file("tin", -TOLL_ONE_PCT);     // Pay the user 1%
+        psm.file("tin", -TOLL_ONE_PCT); // Pay the user 1%
 
         assertEq(gem.balanceOf(address(this)), 1000 * ONE_USDX);
         assertEq(vat.gem(ILK, address(this)), 0);
@@ -251,7 +238,7 @@ contract PsmUnitTest is DSSTest {
 
         assertEq(gem.balanceOf(address(this)), 940 * ONE_USDX);
         assertEq(dai.balanceOf(address(this)), 51 ether);
-        assertEq(vat.dai(vow),  9 * RAD);
+        assertEq(vat.dai(vow), 9 * RAD);
         (uint256 ink2, uint256 art2) = vat.urns(ILK, address(psm));
         assertEq(ink2, 60 ether);
         assertEq(art2, 60 ether);
@@ -343,7 +330,7 @@ contract PsmUnitTest is DSSTest {
     }
 
     function testSwapBothSmallFeeInsufficientDai() public {
-        psm.file("tin", 1);        // Very small fee pushes you over the edge
+        psm.file("tin", 1); // Very small fee pushes you over the edge
 
         User user1 = new User(psm);
         gem.transfer(address(user1), 40 * ONE_USDX);
@@ -399,5 +386,9 @@ contract PsmUnitTest is DSSTest {
         vm.expectRevert("Vat/underflow");
         psm.exit(address(123), 50 * ONE_USDX);
     }
-    
+
+    event File(bytes32 indexed what, int256 data);
+    event SellGem(address indexed owner, uint256 value, int256 fee);
+    event BuyGem(address indexed owner, uint256 value, int256 fee);
+    event Exit(address indexed usr, uint256 amt);
 }
