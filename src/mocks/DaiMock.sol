@@ -1,20 +1,22 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity >=0.8.0;
+pragma solidity ^0.8.16;
 
 contract DaiMock {
-    mapping (address => uint)                      public balanceOf;
-    mapping (address => mapping (address => uint)) public allowance;
+    mapping(address => uint256) public balanceOf;
+    mapping(address => mapping(address => uint256)) public allowance;
 
     function add(uint256 x, uint256 y) internal pure returns (uint256 z) {
         unchecked {
             require((z = x + y) >= x, "overflow");
         }
     }
+
     function sub(uint256 x, uint256 y) internal pure returns (uint256 z) {
         unchecked {
             require((z = x - y) <= x, "underflow");
         }
     }
+
     function mul(uint256 x, uint256 y) internal pure returns (uint256 z) {
         unchecked {
             require(y == 0 || (z = x * y) / y == x, "overflow");
@@ -24,9 +26,8 @@ contract DaiMock {
     function transfer(address dst, uint256 wad) external returns (bool) {
         return transferFrom(msg.sender, dst, wad);
     }
-    function transferFrom(address src, address dst, uint256 wad)
-        public returns (bool)
-    {
+
+    function transferFrom(address src, address dst, uint256 wad) public returns (bool) {
         require(balanceOf[src] >= wad, "Dai/insufficient-balance");
         if (src != msg.sender && allowance[src][msg.sender] != type(uint256).max) {
             require(allowance[src][msg.sender] >= wad, "Dai/insufficient-allowance");
@@ -36,9 +37,11 @@ contract DaiMock {
         balanceOf[dst] = add(balanceOf[dst], wad);
         return true;
     }
-    function mint(address usr, uint256 wad) external  {
+
+    function mint(address usr, uint256 wad) external {
         balanceOf[usr] = add(balanceOf[usr], wad);
     }
+
     function burn(address usr, uint256 wad) external {
         require(balanceOf[usr] >= wad, "Dai/insufficient-balance");
         if (usr != msg.sender && allowance[usr][msg.sender] != type(uint256).max) {
@@ -47,6 +50,7 @@ contract DaiMock {
         }
         balanceOf[usr] = sub(balanceOf[usr], wad);
     }
+
     function approve(address usr, uint256 wad) external returns (bool) {
         allowance[msg.sender][usr] = wad;
         return true;

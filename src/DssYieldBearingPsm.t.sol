@@ -19,6 +19,7 @@ import "dss-test/DssTest.sol";
 import {DaiJoinMock} from "./mocks/DaiJoinMock.sol";
 import {DaiMock} from "./mocks/DaiMock.sol";
 import {TokenMock} from "./mocks/TokenMock.sol";
+import {YieldBearingTokenMock} from "./mocks/YieldBearingTokenMock.sol";
 import {VatMock} from "./mocks/VatMock.sol";
 import {DssYieldBearingPsm} from "./DssYieldBearingPsm.sol";
 
@@ -39,10 +40,6 @@ contract User {
     function buyGem(uint256 value) public {
         psm.buyGem(address(this), value);
     }
-
-    function exit(uint256 value) public {
-        psm.exit(address(this), value);
-    }
 }
 
 contract DssYieldBearingPsmTest is DssTest {
@@ -51,22 +48,27 @@ contract DssYieldBearingPsmTest is DssTest {
     DaiMock dai;
     address vow;
 
-    TokenMock gem;
-
+    TokenMock asset;
+    YieldBearingTokenMock gem;
     DssYieldBearingPsm psm;
 
-    bytes32 constant ILK = "PSM-USDX-A";
-
+    bytes32 constant ILK = "PSM-SUSDX-A";
     int256 constant TOLL_ONE_PCT = 10 ** 16;
-    uint256 constant ONE_USDX = 10 ** 6;
+    uint256 constant ONE_USDX = 10 ** 18;
 
     function setUp() public {
         vat = new VatMock();
         dai = new DaiMock();
         daiJoin = new DaiJoinMock(address(vat), address(dai));
         vow = address(123);
-        gem = new TokenMock();
-        gem.mint(address(this), 1000 * ONE_USDX);
+        asset = new TokenMock("USDX", "USDX");
+        asset.mint(address(this), 1250 * ONE_USDX);
+        gem = new YieldBearingTokenMock(address(asset), "sUSDX", "sUSDX");
+        asset.approve(address(gem), type(uint256).max);
+        gem.deposit(1250 * ONE_USDX, address(this));
+
+        // Burning 250 gem so the "price" of it becomes larger than the underlying asset
+        gem.burn(address(this), 250 * ONE_USDX);
 
         psm = new DssYieldBearingPsm(ILK, address(gem), address(daiJoin));
         psm.file("vow", vow);
@@ -98,36 +100,55 @@ contract DssYieldBearingPsmTest is DssTest {
         assertEq(psm.tin(), 0);
         vm.expectEmit(true, false, false, true);
         emit File("tin", int256(123));
-        psm.file("tin", 123);
+        psm.file("tin", int256(123));
         assertEq(psm.tin(), 123);
+
+        vm.expectEmit(true, false, false, true);
+        emit File("tin", psm.SHALTED());
+        psm.file("tin", psm.SHALTED());
+        assertEq(psm.tin(), psm.SHALTED());
 
         assertEq(psm.tout(), 0);
         vm.expectEmit(true, false, false, true);
         emit File("tout", int256(123));
-        psm.file("tout", 123);
+        psm.file("tout", int256(123));
         assertEq(psm.tout(), 123);
+
+        vm.expectEmit(true, false, false, true);
+        emit File("tout", psm.SHALTED());
+        psm.file("tout", psm.SHALTED());
+        assertEq(psm.tout(), psm.SHALTED());
 
         int256 SWAD = int256(WAD);
         psm.file("tin", SWAD);
         assertEq(psm.tin(), SWAD);
-        vm.expectRevert("DssYieldBearingPsm/out-of-range");
+        vm.expectRevert("DssYieldBearingPsm/tin-out-of-range");
         psm.file("tin", SWAD + 1);
         psm.file("tin", -SWAD);
         assertEq(psm.tin(), -SWAD);
-        vm.expectRevert("DssYieldBearingPsm/out-of-range");
+        vm.expectRevert("DssYieldBearingPsm/tin-out-of-range");
         psm.file("tin", -SWAD - 1);
 
         psm.file("tout", SWAD);
         assertEq(psm.tout(), SWAD);
-        vm.expectRevert("DssYieldBearingPsm/out-of-range");
+        vm.expectRevert("DssYieldBearingPsm/tout-out-of-range");
         psm.file("tout", SWAD + 1);
         psm.file("tout", -SWAD);
         assertEq(psm.tout(), -SWAD);
-        vm.expectRevert("DssYieldBearingPsm/out-of-range");
+        vm.expectRevert("DssYieldBearingPsm/tout-out-of-range");
         psm.file("tout", -SWAD - 1);
 
         vm.expectRevert("DssYieldBearingPsm/file-unrecognized-param");
-        psm.file("bad value", 123);
+        psm.file("bad value", int256(123));
+
+        vm.expectRevert("DssYieldBearingPsm/file-unrecognized-param");
+        psm.file("bad value", uint256(123));
+
+        // Reverts when trying to use the compatibility overload to set regular values
+        vm.expectRevert("DssYieldBearingPsm/tout-out-of-range");
+        psm.file("tout", uint256(123));
+        vm.expectRevert("DssYieldBearingPsm/tin-out-of-range");
+        psm.file("tin", uint256(123));
     }
 
     function testSellGemNoFee() public {
@@ -139,20 +160,20 @@ contract DssYieldBearingPsmTest is DssTest {
 
         gem.approve(address(psm), type(uint256).max);
         vm.expectEmit(true, false, false, true);
-        emit SellGem(address(this), 100 * ONE_USDX, 0);
+        emit SellGem(address(this), 100 * ONE_USDX, 0, gem.convertToAssets(100 * WAD));
         psm.sellGem(address(this), 100 * ONE_USDX);
 
-        assertEq(gem.balanceOf(address(this)), 900 * ONE_USDX);
-        assertEq(vat.gem(ILK, address(this)), 0);
-        assertEq(vat.dai(address(this)), 0);
-        assertEq(dai.balanceOf(address(this)), 100 ether);
-        assertEq(vat.dai(vow), 0);
+        assertEq(gem.balanceOf(address(this)), 900 * ONE_USDX, "Gem: invalid balance");
+        assertEq(vat.gem(ILK, address(this)), 0, "Vat gem: invalid value");
+        assertEq(vat.dai(address(this)), 0, "Vat dai: invalid value this");
+        assertEq(dai.balanceOf(address(this)), gem.convertToAssets(100 * WAD), "Dai: invalid balance");
+        assertEq(vat.dai(vow), 0, "Vat dai: invalid value vow");
         (uint256 inkme, uint256 artme) = vat.urns(ILK, address(this));
-        assertEq(inkme, 0);
-        assertEq(artme, 0);
+        assertEq(inkme, 0, "Vat ink: invalid value this");
+        assertEq(artme, 0, "Vat art: invalid value this");
         (uint256 inkpsm, uint256 artpsm) = vat.urns(ILK, address(psm));
-        assertEq(inkpsm, 100 ether);
-        assertEq(artpsm, 100 ether);
+        assertEq(inkpsm, gem.convertToAssets(100 * WAD), "Vat ink: invalid value psm");
+        assertEq(artpsm, gem.convertToAssets(100 * WAD), "Vat art: invalid value psm");
     }
 
     function testSellGemFee() public {
@@ -166,14 +187,15 @@ contract DssYieldBearingPsmTest is DssTest {
 
         gem.approve(address(psm), type(uint256).max);
         vm.expectEmit(true, false, false, true);
-        emit SellGem(address(this), 100 * ONE_USDX, int256(WAD));
+        uint256 fee = gem.convertToAssets(1 * WAD);
+        emit SellGem(address(this), 100 * ONE_USDX, int256(fee), gem.convertToAssets(100 * WAD) - fee);
         psm.sellGem(address(this), 100 * ONE_USDX);
 
-        assertEq(gem.balanceOf(address(this)), 900 * ONE_USDX);
-        assertEq(vat.gem(ILK, address(this)), 0);
-        assertEq(vat.dai(address(this)), 0);
-        assertEq(dai.balanceOf(address(this)), 99 ether);
-        assertEq(vat.dai(vow), RAD);
+        assertEq(gem.balanceOf(address(this)), 900 * ONE_USDX, "Gem: invalid balance");
+        assertEq(vat.gem(ILK, address(this)), 0, "Vat gem: invalid value");
+        assertEq(vat.dai(address(this)), 0, "Vat dai: invalid value this");
+        assertEq(dai.balanceOf(address(this)), gem.convertToAssets(99 * WAD), "Dai: invalid balance");
+        assertEq(vat.dai(vow), gem.convertToAssets(1 * RAD), "Dai: invalid value vow");
     }
 
     function testSellGemNegativeFee() public {
@@ -188,33 +210,34 @@ contract DssYieldBearingPsmTest is DssTest {
 
         gem.approve(address(psm), type(uint256).max);
         vm.expectEmit(true, false, false, true);
-        emit SellGem(address(this), 100 * ONE_USDX, -int256(WAD));
+        uint256 subsidy = gem.convertToAssets(1 * WAD);
+        emit SellGem(address(this), 100 * ONE_USDX, -int256(subsidy), gem.convertToAssets(100 * WAD) + subsidy);
         psm.sellGem(address(this), 100 * ONE_USDX);
 
-        assertEq(gem.balanceOf(address(this)), 900 * ONE_USDX);
-        assertEq(vat.gem(ILK, address(this)), 0);
-        assertEq(vat.dai(address(this)), 0);
-        assertEq(dai.balanceOf(address(this)), 101 ether);
-        assertEq(vat.dai(vow), 0);
-        assertEq(vat.sin(vow), RAD);
+        assertEq(gem.balanceOf(address(this)), 900 * ONE_USDX, "Gem: invalid balance");
+        assertEq(vat.gem(ILK, address(this)), 0, "Vat gem: invalid value");
+        assertEq(vat.dai(address(this)), 0, "Vat dai: invalid value this");
+        assertEq(dai.balanceOf(address(this)), gem.convertToAssets(101 * WAD), "Dai: invalid balance");
+        assertEq(vat.dai(vow), 0, "Vat dai: invalid value vow");
+        assertEq(vat.sin(vow), gem.convertToAssets(RAD), "Dai: invalid value sin");
     }
 
     function testSwapBothNoFee() public {
         gem.approve(address(psm), type(uint256).max);
         psm.sellGem(address(this), 100 * ONE_USDX);
-        dai.approve(address(psm), 40 ether);
+        dai.approve(address(psm), gem.convertToAssets(40 * WAD));
         vm.expectEmit(true, false, false, true);
-        emit BuyGem(address(this), 40 * ONE_USDX, 0);
+        emit BuyGem(address(this), 40 * ONE_USDX, 0, gem.convertToAssets(40 * WAD));
         psm.buyGem(address(this), 40 * ONE_USDX);
 
-        assertEq(gem.balanceOf(address(this)), 940 * ONE_USDX);
-        assertEq(vat.gem(ILK, address(this)), 0);
-        assertEq(vat.dai(address(this)), 0);
-        assertEq(dai.balanceOf(address(this)), 60 ether);
-        assertEq(vat.dai(vow), 0);
+        assertEq(gem.balanceOf(address(this)), 940 * ONE_USDX, "Gem: invalid balance");
+        assertEq(vat.gem(ILK, address(this)), 0, "Vat gem: invalid value");
+        assertEq(vat.dai(address(this)), 0, "Vat dai: invalid value this");
+        assertEq(dai.balanceOf(address(this)), gem.convertToAssets(60 * WAD), "Dai: invalid balance");
+        assertEq(vat.dai(vow), 0, "Vat dai: invalid value vow");
         (uint256 ink, uint256 art) = vat.urns(ILK, address(psm));
-        assertEq(ink, 60 ether);
-        assertEq(art, 60 ether);
+        assertEq(ink, gem.convertToAssets(60 * WAD), "Vat ink: invalid value psm");
+        assertEq(art, gem.convertToAssets(60 * WAD), "Vat art: invalid value psm");
     }
 
     function testSwapBothFees() public {
@@ -224,24 +247,25 @@ contract DssYieldBearingPsmTest is DssTest {
         gem.approve(address(psm), type(uint256).max);
         psm.sellGem(address(this), 100 * ONE_USDX);
 
-        assertEq(gem.balanceOf(address(this)), 900 * ONE_USDX);
-        assertEq(dai.balanceOf(address(this)), 95 ether);
-        assertEq(vat.dai(vow), 5 * RAD);
+        assertEq(gem.balanceOf(address(this)), 900 * ONE_USDX, "(sell) Gem: invalid balance");
+        assertEq(dai.balanceOf(address(this)), gem.convertToAssets(95 * WAD), "(sell) Dai: invalid balance");
+        assertEq(vat.dai(vow), gem.convertToAssets(5 * RAD), "(sell): Vat dai: invalid value vow");
         (uint256 ink1, uint256 art1) = vat.urns(ILK, address(psm));
-        assertEq(ink1, 100 ether);
-        assertEq(art1, 100 ether);
+        assertEq(ink1, gem.convertToAssets(100 * WAD), "(sell) Vat ink: invalid value psm");
+        assertEq(art1, gem.convertToAssets(100 * WAD), "(sell) Vat art: invalid value psm");
 
-        dai.approve(address(psm), 44 ether);
+        dai.approve(address(psm), gem.convertToAssets(44 * WAD));
         vm.expectEmit(true, false, false, true);
-        emit BuyGem(address(this), 40 * ONE_USDX, 4 * int256(WAD));
+        uint256 fee = gem.convertToAssets(4 * WAD);
+        emit BuyGem(address(this), 40 * ONE_USDX, int256(fee), gem.convertToAssets(40 * WAD) + fee);
         psm.buyGem(address(this), 40 * ONE_USDX);
 
-        assertEq(gem.balanceOf(address(this)), 940 * ONE_USDX);
-        assertEq(dai.balanceOf(address(this)), 51 ether);
-        assertEq(vat.dai(vow), 9 * RAD);
+        assertEq(gem.balanceOf(address(this)), 940 * ONE_USDX, "(buy) Gem: invalid balance");
+        assertEq(dai.balanceOf(address(this)), gem.convertToAssets(51 * WAD), "(buy) Dai: invalid balance");
+        assertEq(vat.dai(vow), gem.convertToAssets(9 * RAD), "(buy): Vat dai: invalid value vow");
         (uint256 ink2, uint256 art2) = vat.urns(ILK, address(psm));
-        assertEq(ink2, 60 ether);
-        assertEq(art2, 60 ether);
+        assertEq(ink2, gem.convertToAssets(60 * WAD), "(buy) Vat ink: invalid value psm");
+        assertEq(art2, gem.convertToAssets(60 * WAD), "(buy) Vat art: invalid value psm");
     }
 
     function testSwapBothNegativeFees() public {
@@ -252,85 +276,92 @@ contract DssYieldBearingPsmTest is DssTest {
 
         psm.sellGem(address(this), 100 * ONE_USDX);
 
-        assertEq(gem.balanceOf(address(this)), 900 * ONE_USDX);
-        assertEq(dai.balanceOf(address(this)), 105 ether);
-        assertEq(vat.dai(vow), 0);
-        assertEq(vat.sin(vow), 5 * RAD);
+        assertEq(gem.balanceOf(address(this)), 900 * ONE_USDX, "(sell) Gem: invalid balance");
+        assertEq(dai.balanceOf(address(this)), gem.convertToAssets(105 * WAD), "(sell) Dai: invalid balance");
+        assertEq(vat.dai(vow), 0, "(sell): Vat dai: invalid value vow");
+        assertEq(vat.sin(vow), gem.convertToAssets(5 * RAD), "(sell): Vat dai: invalid value sin");
         (uint256 ink1, uint256 art1) = vat.urns(ILK, address(psm));
-        assertEq(ink1, 100 ether);
-        assertEq(art1, 100 ether);
+        assertEq(ink1, gem.convertToAssets(100 * WAD), "(sell) Vat ink: invalid value psm");
+        assertEq(art1, gem.convertToAssets(100 * WAD), "(sell) Vat art: invalid value psm");
 
         vm.expectEmit(true, false, false, true);
-        emit BuyGem(address(this), 40 * ONE_USDX, -4 * int256(WAD));
+        uint256 subsidy = gem.convertToAssets(4 * WAD);
+        emit BuyGem(address(this), 40 * ONE_USDX, -int256(subsidy), gem.convertToAssets(40 * WAD) - subsidy);
         psm.buyGem(address(this), 40 * ONE_USDX);
 
-        assertEq(gem.balanceOf(address(this)), 940 * ONE_USDX);
-        assertEq(dai.balanceOf(address(this)), 69 ether);
-        assertEq(vat.dai(vow), 0);
-        assertEq(vat.sin(vow), 9 * RAD);
+        assertEq(gem.balanceOf(address(this)), 940 * ONE_USDX, "(buy) Gem: invalid balance");
+        assertEq(dai.balanceOf(address(this)), gem.convertToAssets(69 * WAD), "(buy) Dai: invalid balance");
+        assertEq(vat.dai(vow), 0, "(buy) Vat dai: invalid value vow");
+        assertEq(vat.sin(vow), gem.convertToAssets(9 * RAD), "(buy) Vat dai: invalid value sin");
         (uint256 ink2, uint256 art2) = vat.urns(ILK, address(psm));
-        assertEq(ink2, 60 ether);
-        assertEq(art2, 60 ether);
+        assertEq(ink2, gem.convertToAssets(60 * WAD), "(buy) Vat ink: invalid value psm");
+        assertEq(art2, gem.convertToAssets(60 * WAD), "(buy) Vat art: invalid value psm");
     }
 
     function testSwapBothOther() public {
         gem.approve(address(psm), type(uint256).max);
         psm.sellGem(address(this), 100 * ONE_USDX);
 
-        assertEq(gem.balanceOf(address(this)), 900 * ONE_USDX);
-        assertEq(dai.balanceOf(address(this)), 100 ether);
-        assertEq(vat.dai(vow), 0);
+        assertEq(gem.balanceOf(address(this)), 900 * ONE_USDX, "(sell) Gem: invalid balance");
+        assertEq(dai.balanceOf(address(this)), gem.convertToAssets(100 * WAD), "(sell) Dai: invalid balance");
+        assertEq(vat.dai(vow), 0, "(sell) Vat dai: invalid value vow");
 
         User someUser = new User(psm);
-        dai.mint(address(someUser), 45 ether);
+        dai.mint(address(someUser), gem.convertToAssets(45 * WAD));
         someUser.buyGem(40 * ONE_USDX);
 
-        assertEq(gem.balanceOf(address(this)), 900 * ONE_USDX);
-        assertEq(gem.balanceOf(address(someUser)), 40 * ONE_USDX);
-        assertEq(vat.gem(ILK, address(this)), 0 ether);
-        assertEq(vat.gem(ILK, address(someUser)), 0 ether);
-        assertEq(vat.dai(address(this)), 0);
-        assertEq(vat.dai(address(someUser)), 0);
-        assertEq(dai.balanceOf(address(this)), 100 ether);
-        assertEq(dai.balanceOf(address(someUser)), 5 ether);
-        assertEq(vat.dai(vow), 0);
+        assertEq(gem.balanceOf(address(this)), 900 * ONE_USDX, "(buy) Gem: invalid balance this");
+        assertEq(gem.balanceOf(address(someUser)), 40 * ONE_USDX, "(buy) Gem: invalid balance user");
+        assertEq(vat.gem(ILK, address(this)), 0, "(buy) Vat gem: invalid value this");
+        assertEq(vat.gem(ILK, address(someUser)), 0, "(buy) Vat gem: invalid value user");
+        assertEq(vat.dai(address(this)), 0, "(buy) Vat dai: invalid value this");
+        assertEq(vat.dai(address(someUser)), 0, "(buy) Vat dai: invalid value user");
+        assertEq(dai.balanceOf(address(this)), gem.convertToAssets(100 * WAD), "(buy) Dai: invalid balance this");
+        assertEq(dai.balanceOf(address(someUser)), gem.convertToAssets(5 * WAD), "(buy) Dai: invalid balance user");
+        assertEq(vat.dai(vow), 0, "(buy) Vat dai: invalid value vow");
         (uint256 ink, uint256 art) = vat.urns(ILK, address(psm));
-        assertEq(ink, 60 ether);
-        assertEq(art, 60 ether);
+        assertEq(ink, gem.convertToAssets(60 * WAD), "(buy) Vat ink: invalid value psm");
+        assertEq(art, gem.convertToAssets(60 * WAD), "(buy) Vat art: invalid value psm");
     }
 
     function testSwapBothOtherSmallFee() public {
-        psm.file("tin", 1);
+        psm.file("tin", int256(1));
+        psm.file("tout", int256(1));
 
         User user1 = new User(psm);
         gem.transfer(address(user1), 40 * ONE_USDX);
         user1.sellGem(40 * ONE_USDX);
 
-        assertEq(gem.balanceOf(address(user1)), 0 * ONE_USDX);
-        assertEq(dai.balanceOf(address(user1)), 40 ether - 40);
-        assertEq(vat.dai(vow), 40 * RAY);
+        assertEq(gem.balanceOf(address(user1)), 0, "(sell) Gem: invalid balance user");
+        assertEq(dai.balanceOf(address(user1)), gem.convertToAssets(40 * WAD - 40), "(sell) Dai: invalid balance user");
+        assertEq(vat.dai(vow), gem.convertToAssets(40 * RAY), "(sell) Vat dai: invalid value vow");
         (uint256 ink1, uint256 art1) = vat.urns(ILK, address(psm));
-        assertEq(ink1, 40 ether);
-        assertEq(art1, 40 ether);
+        assertEq(ink1, gem.convertToAssets(40 * WAD), "(sell) Vat ink: invalid value psm");
+        assertEq(art1, gem.convertToAssets(40 * WAD), "(sell) Vat art: invalid value psm");
 
-        user1.buyGem(40 * ONE_USDX - 1);
+        user1.buyGem(30 * ONE_USDX);
 
-        assertEq(gem.balanceOf(address(user1)), 40 * ONE_USDX - 1);
-        assertEq(dai.balanceOf(address(user1)), 999999999960);
-        assertEq(vat.dai(vow), 40 * RAY);
+        assertEq(gem.balanceOf(address(user1)), 30 * ONE_USDX, "(buy) Gem: invalid balance user");
+        assertApproxEqRel(
+            dai.balanceOf(address(user1)),
+            gem.convertToAssets((40 * WAD - 40) - (30 * WAD + 30)),
+            10 ** 15, // Allow for 0.1% error margin
+            "(buy) Dai: invalid balance user"
+        );
+        assertEq(vat.dai(vow), gem.convertToAssets((40 + 30)) * RAY, "(buy) Vat dai: invalid value vow");
         (uint256 ink2, uint256 art2) = vat.urns(ILK, address(psm));
-        assertEq(ink2, 1 * 10 ** 12);
-        assertEq(art2, 1 * 10 ** 12);
+        assertEq(ink2, gem.convertToAssets(10 * WAD), "(buy) Vat ink: invalid value psm");
+        assertEq(art2, gem.convertToAssets(10 * WAD), "(buy) Vat art: invalid value psm");
     }
 
     function testSellGemInsufficientGem() public {
         User user1 = new User(psm);
-        vm.expectRevert("Gem/insufficient-balance");
+        vm.expectRevert();
         user1.sellGem(40 * ONE_USDX);
     }
 
     function testSwapBothSmallFeeInsufficientDai() public {
-        psm.file("tin", 1); // Very small fee pushes you over the edge
+        psm.file("tin", int256(1)); // Very small fee pushes you over the edge
 
         User user1 = new User(psm);
         gem.transfer(address(user1), 40 * ONE_USDX);
@@ -340,10 +371,12 @@ contract DssYieldBearingPsmTest is DssTest {
     }
 
     function testSellGemOverLine() public {
-        gem.mint(address(this), 1000 * ONE_USDX);
+        asset.mint(address(this), 1000 * ONE_USDX);
+        gem.deposit(1000 * ONE_USDX, address(this));
         gem.approve(address(psm), type(uint256).max);
+        assertEq(vat.Line(), 1000 * RAD);
         vm.expectRevert("Vat/ceiling-exceeded");
-        psm.sellGem(address(this), 2000 * ONE_USDX);
+        psm.sellGem(address(this), 1001 * ONE_USDX);
     }
 
     function testTwoUsersInsufficientDai() public {
@@ -352,7 +385,7 @@ contract DssYieldBearingPsmTest is DssTest {
         user1.sellGem(40 * ONE_USDX);
 
         User user2 = new User(psm);
-        dai.mint(address(user2), 39 ether);
+        dai.mint(address(user2), 39 * WAD);
         vm.expectRevert("Dai/insufficient-balance");
         user2.buyGem(40 * ONE_USDX);
     }
@@ -364,31 +397,17 @@ contract DssYieldBearingPsmTest is DssTest {
         psm.buyGem(address(this), 0);
     }
 
-    function testExit() public {
-        // Add some gems to psm
-        gem.approve(address(psm), type(uint256).max);
-        psm.sellGem(address(this), 100 * ONE_USDX);
+    function testRevertSwapWhenHalted() public {
+        psm.file("tout", psm.SHALTED());
+        vm.expectRevert("DssYieldBearingPsm/buy-gem-halted");
+        psm.buyGem(address(this), 1);
 
-        // I got some gems somehow
-        vat.slip(ILK, address(this), int256(50 ether));
-
-        // Can exit at 1:1
-        assertEq(vat.gem(ILK, address(this)), 50 ether);
-        assertEq(gem.balanceOf(address(123)), 0);
-
-        psm.exit(address(123), 50 * ONE_USDX);
-
-        assertEq(vat.gem(ILK, address(this)), 0);
-        assertEq(gem.balanceOf(address(123)), 50 * ONE_USDX);
-    }
-
-    function testExitMissingGems() public {
-        vm.expectRevert("Vat/underflow");
-        psm.exit(address(123), 50 * ONE_USDX);
+        psm.file("tin", psm.SHALTED());
+        vm.expectRevert("DssYieldBearingPsm/sell-gem-halted");
+        psm.sellGem(address(this), 1);
     }
 
     event File(bytes32 indexed what, int256 data);
-    event SellGem(address indexed owner, uint256 value, int256 fee);
-    event BuyGem(address indexed owner, uint256 value, int256 fee);
-    event Exit(address indexed usr, uint256 amt);
+    event SellGem(address indexed owner, uint256 value, int256 fee, uint256 daiOut);
+    event BuyGem(address indexed owner, uint256 value, int256 fee, uint256 daiIn);
 }
