@@ -195,6 +195,7 @@ contract DssYieldBearingPsm {
      * @dev Swapping fees may not apply due to rounding errors for small swaps where
      *      `gemAmt < 10**gem.decimals() / tin` or
      *      `gemAmt < 10**gem.decimals() / tout`.
+     * @dev Setting `tin` or `tout` to `SHALTED` effectively disables selling and buying gems respectively.
      * @param what The changed parameter name. ["tin", "tout"].
      * @param data The new value of the parameter.
      */
