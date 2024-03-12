@@ -52,3 +52,16 @@ Please note this was a conscious decision to avoid dealing with decimal division
 Instead of being pegged 1:1 to `gem`, the ratio is relative to its underlying `asset`. We leverage `ERC4626.convertToAssets()` to get the "oracle price" of the underlying asset in terms of `gem`.
 
 Notice that no `ERC4626.deposit()` or `ERC4626.withdraw()` calls are made. The swaps are made entirely in terms of the yield-bearing token, adjusted by its "price", meaning that the amount of `gem` in the swap might not match exactly the amount of Dai.
+
+## Old Contracts [v1]
+
+### Mainnet
+
+| Contract     | Deployment                                                                                                                 |
+| :------      | :-------                                                                                                                   |
+| USDC GemJoin | [0x0A59649758aa4d66E25f08Dd01271e891fe52199](https://etherscan.io/address/0x0A59649758aa4d66E25f08Dd01271e891fe52199#code) |
+| USDC PSM     | [0x89B78CfA322F6C5dE0aBcEecab66Aee45393cC5A](https://etherscan.io/address/0x89B78CfA322F6C5dE0aBcEecab66Aee45393cC5A#code) |
+| USDP GemJoin | [0x7bbd8cA5e413bCa521C2c80D8d1908616894Cf21](https://etherscan.io/address/0x7bbd8cA5e413bCa521C2c80D8d1908616894Cf21#code) |
+| USDP PSM     | [0x961Ae24a1Ceba861D1FDf723794f6024Dc5485Cf](https://etherscan.io/address/0x961Ae24a1Ceba861D1FDf723794f6024Dc5485Cf#code) |
+| GUSD GemJoin | [0xe29A14bcDeA40d83675aa43B72dF07f649738C8b](https://etherscan.io/address/0xe29a14bcdea40d83675aa43b72df07f649738c8b)      |
+| GUSD PSM     | [0x204659B2Fd2aD5723975c362Ce2230Fba11d3900](https://etherscan.io/address/0x204659b2fd2ad5723975c362ce2230fba11d3900)      |
