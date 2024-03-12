@@ -105,16 +105,6 @@ contract DssYieldBearingPsm {
      */
     event Deny(address indexed usr);
     /**
-     * @notice `usr` was granted permission to swap without any fees.
-     * @param usr The user address.
-     */
-    event Kiss(address indexed usr);
-    /**
-     * @notice Permission revoked for `usr` to swap without any fees.
-     * @param usr The user address.
-     */
-    event Diss(address indexed usr);
-    /**
      * @notice A contract parameter was updated.
      * @param what The changed parameter name. ["vow"].
      * @param data The new value of the parameter.
