@@ -104,7 +104,10 @@ library DssYieldBearingPsmInit {
         PipLike(cfg.pip).poke(bytes32(uint256(1 * WAD)));
         require(uint256(PipLike(cfg.pip).read()) == 1 * WAD, "DssYieldBearingPsmInit/invalid-pip-value");
 
-        // 1. Initialize the new ilk
+        // 1. Authorize the PSM on the Vat
+        dss.vat.rely(inst.psm);
+
+        // 2. Initialize the new ilk
         bytes32 ilk = DssPsmLike(inst.psm).ilk();
         dss.vat.init(ilk);
         dss.jug.init(ilk);
@@ -112,17 +115,17 @@ library DssYieldBearingPsmInit {
         dss.spotter.file(ilk, "pip", cfg.pip);
         dss.spotter.poke(ilk);
 
-        // 2. Set auto-line for the new PSM.
+        // 3. Set auto-line for the new PSM.
         AutoLineLike autoLine = AutoLineLike(dss.chainlog.getAddress("MCD_IAM_AUTO_LINE"));
         autoLine.setIlk(ilk, cfg.maxLine, cfg.gap, cfg.ttl);
         autoLine.exec(ilk);
 
-        // 3. Set PSM config params.
+        // 4. Set PSM config params
         DssPsmLike(inst.psm).file("tin", cfg.tin);
         DssPsmLike(inst.psm).file("tout", cfg.tout);
         DssPsmLike(inst.psm).file("vow", dss.chainlog.getAddress("MCD_VOW"));
 
-        // 4. Add the new PSM to `IlkRegistry`
+        // 5. Add the new PSM to `IlkRegistry`
         IlkRegistryLike reg = IlkRegistryLike(dss.chainlog.getAddress("ILK_REGISTRY"));
         // Technically what is backing Dai is the underlying `asset`, not the `gem` itself.
         address asset = ERC4626Like(DssPsmLike(inst.psm).gem()).asset();
@@ -138,7 +141,7 @@ library DssYieldBearingPsmInit {
             ERC20Like(asset).symbol()
         );
 
-        // 5. Add the new PSM and the PIP to the chainlog.
+        // 6. Add the new PSM and the PIP to the chainlog.
         dss.chainlog.setAddress(cfg.psmKey, inst.psm);
         dss.chainlog.setAddress(cfg.pipKey, cfg.pip);
     }

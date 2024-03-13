@@ -16,6 +16,7 @@
 pragma solidity ^0.8.16;
 
 import "dss-test/DssTest.sol";
+import "dss-test/GodMode.sol";
 import {DssYieldBearingPsm} from "src/DssYieldBearingPsm.sol";
 import {DssValue} from "src/mocks/DssValue.sol";
 import {TokenMock} from "src/mocks/TokenMock.sol";
@@ -194,6 +195,43 @@ contract DssYieldBearingPsmInitTest is DssTest {
         {
             assertEq(dss.chainlog.getAddress(cfg.psmKey), inst.psm, "after: `psm` not in chainlog");
             assertEq(dss.chainlog.getAddress(cfg.pipKey), cfg.pip, "after: `pip` not in chainlog");
+        }
+    }
+
+    function testYieldBearingPsmSwapAfterOnboarding() public {
+        YieldBearingTokenMock _gem = YieldBearingTokenMock(gem);
+        TokenMock _asset = TokenMock(address(_gem.asset()));
+
+        _asset.mint(address(this), 1000 * WAD);
+        _asset.approve(gem, type(uint256).max);
+        _gem.deposit(1000 * WAD, address(this));
+        // Make the "price" of the gem different than 1
+        _gem.burn(address(this), 200 * WAD);
+
+        _gem.approve(address(psm), type(uint256).max);
+        dss.dai.approve(address(psm), type(uint256).max);
+
+        // Simulate a spell casting
+        vm.prank(pause);
+        pauseProxy.exec(address(caller), abi.encodeCall(caller.init, (dss, inst, cfg)));
+
+        {
+            uint256 pDaiBalance = dss.dai.balanceOf(address(this));
+            uint256 daiOutWad = psm.sellGem(address(this), 100 * WAD);
+            uint256 daiBalance = dss.dai.balanceOf(address(this));
+            // 1% fee
+            assertEq(daiOutWad, _gem.convertToAssets(99 * WAD), "(sell): invalid Dai amount");
+            assertEq(daiBalance, pDaiBalance + daiOutWad, "(sell): invalid Dai balance change");
+        }
+
+        {
+            GodMode.setBalance(dss.dai, address(this), 200 * WAD);
+            uint256 pDaiBalance = dss.dai.balanceOf(address(this));
+            uint256 daiInWad = psm.buyGem(address(this), 100 * WAD);
+            uint256 daiBalance = dss.dai.balanceOf(address(this));
+            // 1% fee
+            assertEq(daiInWad, _gem.convertToAssets(101 * WAD), "(buy): invalid Dai amount");
+            assertEq(daiBalance, pDaiBalance - daiInWad, "(buy): invalid Dai balance change");
         }
     }
 }
