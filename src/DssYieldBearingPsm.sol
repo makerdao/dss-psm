@@ -141,9 +141,6 @@ contract DssYieldBearingPsm {
      * @param _daiJoin The Dai adapter.
      */
     constructor(bytes32 _ilk, address _gem, address _daiJoin) {
-        wards[msg.sender] = 1;
-        emit Rely(msg.sender);
-
         ilk = _ilk;
         gem = ERC4626Like(_gem);
         daiJoin = DaiJoinLike(_daiJoin);
@@ -154,6 +151,9 @@ contract DssYieldBearingPsm {
 
         dai.approve(_daiJoin, type(uint256).max);
         vat.hope(_daiJoin);
+
+        wards[msg.sender] = 1;
+        emit Rely(msg.sender);
     }
 
     /*//////////////////////////////////
