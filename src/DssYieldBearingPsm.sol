@@ -46,8 +46,7 @@ interface ERC4626Like is ERC20Like {
 /**
  * @title A PSM for yield-bearing tokens.
  * @notice Swaps Dai for `gem` at a 1:1 exchange rate relative to the underlying `asset`.
- * @notice Fees `tin` and `tout` might apply.
- * @notice `tin` and `tout` can be negative, meaning the swaps are being subsidized by the protocol.
+ * @notice Fees `tin` and `tout` might apply. `tin` and `tout` can be negative, meaning the swaps are being subsidized by the protocol.
  * @dev No conversion between `gem` and its underlying `asset` is performed.
  * @dev A few assumptions are made:
  *      1. There are no other urns for the same `ilk`
@@ -257,28 +256,35 @@ contract DssYieldBearingPsm {
     function sellGem(address usr, uint256 gemAmt) external returns (uint256 daiOutWad) {
         require(uint256(tin) != HALTED, "DssYieldBearingPsm/sell-gem-halted");
 
+        require(gem.transferFrom(msg.sender, address(this), gemAmt), "DssYieldBearingPsm/gem-failed-transfer");
+
         // NOTE: if `gem` and `asset` have different precision, we expect `gem.convertToAssets()` to return the value in `asset` precision.
         uint256 assetAmt18 = gem.convertToAssets(gemAmt) * to18ConversionFactor;
         int256 sAssetAmt18 = _int256(assetAmt18);
 
-        // Transfer in gems and mint Dai
-        require(gem.transferFrom(msg.sender, address(this), gemAmt), "DssYieldBearingPsm/gem-failed-transfer");
+        // Create new debt from the deposited gems
         vat.slip(ilk, address(this), sAssetAmt18);
         vat.frob(ilk, address(this), address(this), address(this), sAssetAmt18, sAssetAmt18);
 
+        daiOutWad = assetAmt18;
         // Fee calculations
         int256 fee = sAssetAmt18 * tin / SWAD;
-        if (fee >= 0) {
-            // Positive fee - move fee to vow
+        if (fee > 0) {
             uint256 ufee = uint256(fee);
-            daiOutWad = assetAmt18 - ufee;
+            // At this point, `0 <= tin_ <= 1 WAD`, so an underflow is not possible
+            unchecked {
+                daiOutWad -= ufee;
+            }
+            // Positive fee - move it to the vow
             vat.move(address(this), vow, ufee * RAY);
-        } else {
+        } else if (fee < 0) {
             // Negative fee - pay the user extra from the vow
             uint256 ufee = uint256(-fee);
-            daiOutWad = assetAmt18 + ufee;
+            daiOutWad += ufee;
             vat.suck(vow, address(this), ufee * RAY);
         }
+
+        // Mint ERC-20 Dai
         daiJoin.exit(usr, daiOutWad);
 
         emit SellGem(usr, gemAmt, fee, daiOutWad);
@@ -293,31 +299,37 @@ contract DssYieldBearingPsm {
     function buyGem(address usr, uint256 gemAmt) external returns (uint256 daiInWad) {
         require(uint256(tout) != HALTED, "DssYieldBearingPsm/buy-gem-halted");
 
-        // NOTE: if `gem` and `asset` have different precision, we expect `gem.convertToAssets()` to return the value in `asset` precision.
+        // NOTE: if `gem` and `asset` have different precision, we expect `gem.convertToAssets()` to return the value in `asset` precision
         uint256 assetAmt18 = gem.convertToAssets(gemAmt) * to18ConversionFactor;
         int256 sAssetAmt18 = _int256(assetAmt18);
 
+        daiInWad = assetAmt18;
         // Fee calculations
         int256 fee = sAssetAmt18 * tout / SWAD;
-        if (fee >= 0) {
-            // Positive fee - move fee to vow below after daiInWad comes in
-            daiInWad = assetAmt18 + uint256(fee);
-        } else {
-            // Negative fee - pay the user extra from the vow
+        if (fee > 0) {
+            // Positive fee - move it to the vow below, after `daiInWad` comes in
+            daiInWad += uint256(fee);
+        } else if (fee < 0) {
             uint256 ufee = uint256(-fee);
-            daiInWad = assetAmt18 - ufee;
+            // At this point, `-1 WAD <= tout <= 0`, so an underflow is not possible
+            unchecked {
+                daiInWad -= ufee;
+            }
+            // Negative fee - get it from the vow
             vat.suck(vow, address(this), ufee * RAY);
         }
 
-        // Transfer in Dai, repay loan and transfer out gems
+        // Transfer in Dai, burn it and repay the debt
         require(dai.transferFrom(msg.sender, address(this), daiInWad), "DssYieldBearingPsm/dai-failed-transfer");
         daiJoin.join(address(this), daiInWad);
         vat.frob(ilk, address(this), address(this), address(this), -sAssetAmt18, -sAssetAmt18);
         vat.slip(ilk, address(this), -sAssetAmt18);
-        require(gem.transfer(usr, gemAmt), "DssYieldBearingPsm/gem-failed-transfer");
-        if (fee >= 0) {
+
+        if (fee > 0) {
             vat.move(address(this), vow, uint256(fee) * RAY);
         }
+
+        require(gem.transfer(usr, gemAmt), "DssYieldBearingPsm/gem-failed-transfer");
 
         emit BuyGem(usr, gemAmt, fee, daiInWad);
     }
