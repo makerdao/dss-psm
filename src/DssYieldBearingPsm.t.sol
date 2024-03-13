@@ -414,7 +414,7 @@ contract DssYieldBearingPsmTest is DssTest {
         psm.sellGem(address(this), 100 * ONE_USDX);
 
         // Burning additional gem to make the price higher
-        gem.burn(address(this), 200 * WAD);
+        gem.burn(address(this), 500 * WAD);
 
         (uint256 pink, uint256 part) = vat.urns(ILK, address(psm));
         uint256 pvowDai = vat.dai(address(vow));
@@ -433,7 +433,7 @@ contract DssYieldBearingPsmTest is DssTest {
         psm.sellGem(address(this), 100 * ONE_USDX);
 
         // Minting additional gem to make the price lower
-        gem.mint(address(this), 200 * WAD);
+        gem.mint(address(this), 500 * WAD);
 
         (uint256 pink, uint256 part) = vat.urns(ILK, address(psm));
         uint256 psinDai = vat.sin(address(vow));
@@ -452,9 +452,9 @@ contract DssYieldBearingPsmTest is DssTest {
         psm.sellGem(address(this), 100 * ONE_USDX);
 
         // Minting additional gem to make the price lower
-        gem.mint(address(this), 200 * WAD);
+        gem.mint(address(this), 500 * WAD);
         // Burning additional gem to make the price higher
-        gem.burn(address(this), 200 * WAD);
+        gem.burn(address(this), 500 * WAD);
 
         vm.expectRevert("DssYieldBearingPsm/nothing-to-mend");
         psm.mend();
@@ -465,11 +465,50 @@ contract DssYieldBearingPsmTest is DssTest {
         psm.sellGem(address(this), 100 * ONE_USDX);
 
         // Burning additional gem to make the price higher
-        gem.burn(address(this), 200 * WAD);
+        gem.burn(address(this), 500 * WAD);
         psm.mend();
 
         vm.expectRevert("DssYieldBearingPsm/already-mended");
         psm.mend();
+    }
+
+    function testSellAndBuyWhenPriceUp() public {
+        gem.approve(address(psm), type(uint256).max);
+        psm.sellGem(address(this), 100 * ONE_USDX);
+
+        // Burning additional gem to make the price higher
+        gem.burn(address(this), 500 * WAD);
+
+        // Should not be able to swap everything out before mending
+        vm.expectRevert();
+        psm.buyGem(address(this), 100 * ONE_USDX);
+
+        psm.mend();
+
+        _mintDai(address(this), 1_000 * WAD);
+        dai.approve(address(psm), type(uint256).max);
+        uint256 daiWadIn = psm.buyGem(address(this), 100 * ONE_USDX);
+        assertGt(daiWadIn, 100 * WAD, "Invalid daiWadIn");
+    }
+
+    function testSellAndBuyWhenPriceDown() public {
+        gem.approve(address(psm), type(uint256).max);
+        psm.sellGem(address(this), 100 * ONE_USDX);
+
+        // Minting additional gem to make the price lower
+        gem.mint(address(this), 500 * WAD);
+
+        _mintDai(address(this), 1_000 * WAD);
+        dai.approve(address(psm), type(uint256).max);
+        uint256 daiWadIn = psm.buyGem(address(this), 100 * ONE_USDX);
+        assertLt(daiWadIn, 100 * WAD, "Invalid daiWadIn");
+    }
+
+    function _mintDai(address to, uint256 wad) internal {
+        vat.hope(address(daiJoin));
+        vat.suck(address(vow), address(this), wad * RAY);
+        daiJoin.exit(address(this), wad);
+        dai.transfer(to, wad);
     }
 
     event File(bytes32 indexed what, int256 data);

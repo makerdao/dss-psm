@@ -358,14 +358,14 @@ contract DssYieldBearingPsm {
 
         int256 delta = _int256(nav) - _int256(ink);
         if (delta > 0) {
-            // Collateral value increased, so we can incorporate the difference to the surplus buffer.
+            // Collateral value increased, so we can incorporate the difference to the surplus buffer
             // Adjust both collateral and Dai position of the PSM vault
             // NOTE: frob might fail if it would exceed the debt ceiling
             vat.slip(ilk, address(this), delta);
             vat.frob(ilk, address(this), address(this), address(this), delta, delta);
             vat.move(address(this), vow, uint256(delta) * RAY);
         } else {
-            // Collateral value decreased, so we need to add it to the protocol bad debt.
+            // Collateral value decreased, so we need to add it to the protocol bad debt
             vat.suck(vow, address(this), uint256(-delta) * RAY);
             vat.frob(ilk, address(this), address(this), address(this), delta, delta);
             vat.slip(ilk, address(this), delta);
