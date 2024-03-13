@@ -409,6 +409,69 @@ contract DssYieldBearingPsmTest is DssTest {
         psm.sellGem(address(this), 1);
     }
 
+    function testMendWhenPriceUp() public {
+        gem.approve(address(psm), type(uint256).max);
+        psm.sellGem(address(this), 100 * ONE_USDX);
+
+        // Burning additional gem to make the price higher
+        gem.burn(address(this), 200 * WAD);
+
+        (uint256 pink, uint256 part) = vat.urns(ILK, address(psm));
+        uint256 pvowDai = vat.dai(address(vow));
+        psm.mend();
+        (uint256 ink, uint256 art) = vat.urns(ILK, address(psm));
+        uint256 vowDai = vat.dai(address(vow));
+
+        assertGt(ink, pink, "Expected ink increase");
+        assertGt(art, part, "Expected art increase");
+        assertGt(vowDai, pvowDai, "Expected surplus buffer increase");
+        assertEq(vat.gem(ILK, address(psm)), 0, "Unexpected unemcumbered gem");
+    }
+
+    function testMendWhenPriceDown() public {
+        gem.approve(address(psm), type(uint256).max);
+        psm.sellGem(address(this), 100 * ONE_USDX);
+
+        // Minting additional gem to make the price lower
+        gem.mint(address(this), 200 * WAD);
+
+        (uint256 pink, uint256 part) = vat.urns(ILK, address(psm));
+        uint256 psinDai = vat.sin(address(vow));
+        psm.mend();
+        (uint256 ink, uint256 art) = vat.urns(ILK, address(psm));
+        uint256 sinDai = vat.sin(address(vow));
+
+        assertLt(ink, pink, "Expected ink increase");
+        assertLt(art, part, "Expected art increase");
+        assertGt(sinDai, psinDai, "Expected sin increase");
+        assertEq(vat.gem(ILK, address(psm)), 0, "Unexpected unemcumbered gem");
+    }
+
+    function testRevertMendWhenNoPriceChange() public {
+        gem.approve(address(psm), type(uint256).max);
+        psm.sellGem(address(this), 100 * ONE_USDX);
+
+        // Minting additional gem to make the price lower
+        gem.mint(address(this), 200 * WAD);
+        // Burning additional gem to make the price higher
+        gem.burn(address(this), 200 * WAD);
+
+        vm.expectRevert("DssYieldBearingPsm/nothing-to-mend");
+        psm.mend();
+    }
+
+    function testRevertMendMoreThanOnceSameBlock() public {
+        gem.approve(address(psm), type(uint256).max);
+        psm.sellGem(address(this), 100 * ONE_USDX);
+
+        // Burning additional gem to make the price higher
+        gem.burn(address(this), 200 * WAD);
+        psm.mend();
+
+        vm.expectRevert("DssYieldBearingPsm/already-mended");
+        psm.mend();
+    }
+
     event File(bytes32 indexed what, int256 data);
     event SellGem(address indexed owner, uint256 value, int256 fee, uint256 daiOut);
     event BuyGem(address indexed owner, uint256 value, int256 fee, uint256 daiIn);

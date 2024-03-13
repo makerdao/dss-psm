@@ -22,6 +22,7 @@ interface VatLike {
     function slip(bytes32, address, int256) external;
     function frob(bytes32, address, address, address, int256, int256) external;
     function suck(address, address, uint256) external;
+    function urns(bytes32, address) external view returns (uint256, uint256);
 }
 
 interface DaiJoinLike {
@@ -32,10 +33,11 @@ interface DaiJoinLike {
 }
 
 interface ERC20Like {
-    function decimals() external view returns (uint8);
     function approve(address, uint256) external returns (bool);
     function transfer(address, uint256) external returns (bool);
     function transferFrom(address, address, uint256) external returns (bool);
+    function decimals() external view returns (uint8);
+    function balanceOf(address) external view returns (uint256);
 }
 
 interface ERC4626Like is ERC20Like {
@@ -83,6 +85,8 @@ contract DssYieldBearingPsm {
     int256 public tout;
     /// @notice Maker Protocol balance sheet.
     address public vow;
+    /// @notice The last time `mend` was called.
+    uint256 public lastMendedAt;
 
     /// @dev Signed `wad` precision.
     int256 internal constant SWAD = 10 ** 18;
@@ -129,6 +133,11 @@ contract DssYieldBearingPsm {
      * @param daiIn The amount of Dai the user sent for the wap. [`wad`]
      */
     event BuyGem(address indexed owner, uint256 value, int256 fee, uint256 daiIn);
+    /**
+     * @notice The collateral position of the PSM was updated.
+     * @param delta The updated amount.
+     */
+    event Mend(int256 delta);
 
     modifier auth() {
         require(wards[msg.sender] == 1, "DssYieldBearingPsm/not-authorized");
@@ -332,5 +341,38 @@ contract DssYieldBearingPsm {
         require(gem.transfer(usr, gemAmt), "DssYieldBearingPsm/gem-failed-transfer");
 
         emit BuyGem(usr, gemAmt, fee, daiInWad);
+    }
+
+    /**
+     * @notice Function that processes surplus or deficits accrued from the yield-bearing token.
+     * @dev It might fail in case the surplus would cause the PSM to exceed the existing debt ceiling.
+     */
+    function mend() external {
+        // Allow mending at most once per block
+        require(lastMendedAt < block.timestamp, "DssYieldBearingPsm/already-mended");
+
+        (uint256 ink,) = vat.urns(ilk, address(this));
+        // NOTE: if `gem` and `asset` have different precision, we expect `gem.convertToAssets()` to return the value in `asset` precision
+        uint256 nav = gem.convertToAssets(gem.balanceOf(address(this))) * to18ConversionFactor;
+        require(nav != ink, "DssYieldBearingPsm/nothing-to-mend");
+
+        int256 delta = _int256(nav) - _int256(ink);
+        if (delta > 0) {
+            // Collateral value increased, so we can incorporate the difference to the surplus buffer.
+            // Adjust both collateral and Dai position of the PSM vault
+            // NOTE: frob might fail if it would exceed the debt ceiling
+            vat.slip(ilk, address(this), delta);
+            vat.frob(ilk, address(this), address(this), address(this), delta, delta);
+            vat.move(address(this), vow, uint256(delta) * RAY);
+        } else {
+            // Collateral value decreased, so we need to add it to the protocol bad debt.
+            vat.suck(vow, address(this), uint256(-delta) * RAY);
+            vat.frob(ilk, address(this), address(this), address(this), delta, delta);
+            vat.slip(ilk, address(this), delta);
+        }
+
+        lastMendedAt = block.timestamp;
+
+        emit Mend(delta);
     }
 }
