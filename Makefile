@@ -1,3 +1,3 @@
-all    :; dapp --use solc:0.6.12 build
-clean  :; dapp clean
+all    :; forge build --use solc:0.8.14
+clean  :; forge clean
 test   :; ./test.sh $(match)

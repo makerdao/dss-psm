@@ -1,1 +1,25 @@
-/out
+# Compiler files
+cache/
+out/
+
+# Ignores broadcast logs
+broadcast/
+
+# Ignores script config
+script/input/**/*.json
+!script/input/**/template-*.json
+script/output/**/*.json
+
+# Docs
+docs/
+
+# Dotenv file
+.env
+
+# Certora
+.*certora*
+.last_confs/
+*.zip
+resource_errors.json
+.zip-output-url.txt
+certora_debug_log.txt
