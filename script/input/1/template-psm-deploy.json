@@ -1,0 +1,4 @@
+{
+  "ilk": "string: the ilk for the deployed PSM",
+  "gem": "address: the address for gem token"
+}
