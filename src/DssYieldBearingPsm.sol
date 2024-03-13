@@ -193,16 +193,15 @@ contract DssYieldBearingPsm {
      * @dev Swapping fees may not apply due to rounding errors for small swaps where
      *      `gemAmt < 10**gem.decimals() / tin` or
      *      `gemAmt < 10**gem.decimals() / tout`.
-     * @dev Setting `tin` or `tout` to `HALTED` effectively disables selling and buying gems respectively.
      * @param what The changed parameter name. ["tin", "tout"].
      * @param data The new value of the parameter.
      */
     function file(bytes32 what, int256 data) external auth {
         if (what == "tin") {
-            require(uint256(data) == HALTED || (-SWAD <= data && data <= SWAD), "DssYieldBearingPsm/tin-out-of-range");
+            require(-SWAD <= data && data <= SWAD, "DssYieldBearingPsm/tin-out-of-range");
             tin = data;
         } else if (what == "tout") {
-            require(uint256(data) == HALTED || (-SWAD <= data && data <= SWAD), "DssYieldBearingPsm/tout-out-of-range");
+            require(-SWAD <= data && data <= SWAD, "DssYieldBearingPsm/tout-out-of-range");
             tout = data;
         } else {
             revert("DssYieldBearingPsm/file-unrecognized-param");
@@ -215,6 +214,7 @@ contract DssYieldBearingPsm {
      * @notice Updates a contract parameter.
      * @dev This overload is designed as an adapter for callers that do not support signed `tin` and `tout`.
      *      It **SHOULD NOT** be called for regular values, as the only accepted value for `data` is `HALTED`.
+     * @dev Setting `tin` or `tout` to `HALTED` effectively disables selling and buying gems respectively.
      * @param what The changed parameter name. ["tin", "tout"].
      * @param data The new value of the parameter.
      */

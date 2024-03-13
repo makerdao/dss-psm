@@ -103,11 +103,6 @@ contract DssYieldBearingPsmTest is DssTest {
         psm.file("tin", int256(123));
         assertEq(psm.tin(), 123);
 
-        vm.expectEmit(true, false, false, true);
-        emit File("tin", int256(psm.HALTED()));
-        psm.file("tin", int256(psm.HALTED()));
-        assertEq(psm.tin(), int256(psm.HALTED()));
-
         // Try with the uint256 overload
         vm.expectEmit(true, false, false, true);
         emit File("tin", int256(psm.HALTED()));
@@ -119,11 +114,6 @@ contract DssYieldBearingPsmTest is DssTest {
         emit File("tout", int256(123));
         psm.file("tout", int256(123));
         assertEq(psm.tout(), 123);
-
-        vm.expectEmit(true, false, false, true);
-        emit File("tout", int256(psm.HALTED()));
-        psm.file("tout", int256(psm.HALTED()));
-        assertEq(psm.tout(), int256(psm.HALTED()));
 
         // Try with the uint256 overload
         vm.expectEmit(true, false, false, true);
